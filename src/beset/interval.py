@@ -124,7 +124,9 @@ class OpenClosedInterval[T: Sortable](Monointerval[T]):
         return True
 
 
-def union[T: Sortable](a: Monointerval[T], b: Monointerval[T]) -> Iterable[Monointerval[T]]:
+def monointerval_union[T: Sortable](
+    a: Monointerval[T], b: Monointerval[T]
+) -> tuple[Monointerval[T]] | tuple[Monointerval[T], Monointerval[T]]:
     """
     Returns a single monointerval or two separate ones in ascending order
     """
@@ -145,7 +147,7 @@ def union[T: Sortable](a: Monointerval[T], b: Monointerval[T]) -> Iterable[Monoi
             (a.start, -a.includes_lower_bound()), (b.start, -b.includes_lower_bound())
         )
         stop, include_upper_bound = max(
-            (a.stop, a.includes_upper_bound()), (b.stop, -b.includes_upper_bound())
+            (a.stop, a.includes_upper_bound()), (b.stop, b.includes_upper_bound())
         )
         return (
             Monointerval.create(start, stop, bool(include_lower_bound), bool(include_upper_bound)),
@@ -169,6 +171,22 @@ def union[T: Sortable](a: Monointerval[T], b: Monointerval[T]) -> Iterable[Monoi
         )
     else:
         return b, a
+
+
+def monointervals_union[T: Sortable](intervals: Iterable[Monointerval[T]]) -> Iterable[Monointerval[T]]:
+    ordered = sorted(intervals, key=lambda x: (x.start, -x.includes_lower_bound()))
+
+    last = OpenInterval(0, 0)  # empty
+
+    for interval in ordered:
+        result = monointerval_union(last, interval)
+        if len(result) == 1:
+            (last,) = result
+        else:
+            confirmed, last = result
+            yield confirmed
+
+    yield last
 
 
 Closed = ClosedInterval

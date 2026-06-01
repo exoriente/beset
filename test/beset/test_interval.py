@@ -4,7 +4,7 @@ from beset.interval import (
     ClosedOpen,
     OpenClosed,
     Multiinterval,
-    union,
+    monointerval_union,
     Monointerval,
     EMPTY_INTERVAL,
 )
@@ -122,93 +122,161 @@ def test_multiinterval_eq_monointerval(
     assert Multiinterval((interval_type(0, 1),)) == interval_type(0, 1)
 
 
-@mark.parametrize("interval_type_a", [Open, Closed, ClosedOpen, OpenClosed])
 @mark.parametrize("interval_type_b", [Open, Closed, ClosedOpen, OpenClosed])
-def test_union(
+@mark.parametrize("interval_type_a", [Open, Closed, ClosedOpen, OpenClosed])
+def test_monointerval_union(
     interval_type_a: type[Open | Closed | ClosedOpen | OpenClosed],
     interval_type_b: type[Open | Closed | ClosedOpen | OpenClosed],
 ) -> None:
+    # empty
+    v = interval_type_a(0, -1)
+    w = interval_type_b(0, -1)
+    assert monointerval_union(v, w) == (EMPTY_INTERVAL,)
+
+    # empty but different bounds
+    v = interval_type_a(0, -1)
+    w = interval_type_b(1, 0)
+    assert monointerval_union(v, w) == (EMPTY_INTERVAL,)
+
+    # zero-length
     v = interval_type_a(0, 0)
     w = interval_type_b(0, 0)
-    assert union(v, w) == (EMPTY_INTERVAL if v.empty() and w.empty() else Closed(0, 0),)
+    assert monointerval_union(v, w) == (
+        EMPTY_INTERVAL if v.empty() and w.empty() else Closed(0, 0),
+    )
 
+    # zero-length but different bounds
     v = interval_type_a(0, 0)
     w = interval_type_b(1, 1)
     if v.empty():
         if w.empty():
-            assert union(v, w) == (EMPTY_INTERVAL,)
+            assert monointerval_union(v, w) == (EMPTY_INTERVAL,)
         else:
-            assert union(v, w) == (w,)
+            assert monointerval_union(v, w) == (w,)
     elif w.empty():
-        assert union(v, w) == (v,)
+        assert monointerval_union(v, w) == (v,)
     else:
-        assert union(v, w) == (v, w)
+        assert monointerval_union(v, w) == (v, w)
 
+    # zero-length but different bounds
     v = interval_type_a(1, 1)
     w = interval_type_b(0, 0)
     if v.empty():
         if w.empty():
-            assert union(v, w) == (EMPTY_INTERVAL,)
+            assert monointerval_union(v, w) == (EMPTY_INTERVAL,)
         else:
-            assert union(v, w) == (w,)
+            assert monointerval_union(v, w) == (w,)
     elif w.empty():
-        assert union(v, w) == (v,)
+        assert monointerval_union(v, w) == (v,)
     else:
-        assert union(v, w) == (w, v)
+        assert monointerval_union(v, w) == (w, v)
 
+    # empty and not empty
+    v = interval_type_a(0, -1)
+    w = interval_type_b(1, 2)
+    assert monointerval_union(v, w) == (w,)
+
+    # not empty and empty
+    v = interval_type_a(1, 2)
+    w = interval_type_b(0, -1)
+    assert monointerval_union(v, w) == (v,)
+
+    # zero-length and not empty
     v = interval_type_a(0, 0)
     w = interval_type_b(1, 2)
-    assert union(v, w) == (w,) if v.empty() else (v, w)
+    assert monointerval_union(v, w) == (w,) if v.empty() else (v, w)
 
+    # not empty and zero-length
     v = interval_type_a(1, 2)
     w = interval_type_b(0, 0)
-    assert union(v, w) == (v,) if w.empty() else (v, w)
+    assert monointerval_union(v, w) == (v,) if w.empty() else (v, w)
 
+    # disjoint in order
     v = interval_type_a(1, 2)
     w = interval_type_b(3, 4)
-    assert union(v, w) == (v, w)
+    assert monointerval_union(v, w) == (v, w)
 
+    # disjoint reverse order
     v = interval_type_a(3, 4)
     w = interval_type_b(1, 2)
-    assert union(v, w) == (w, v)
+    assert monointerval_union(v, w) == (w, v)
 
+    # touching
     v = interval_type_a(1, 2)
     w = interval_type_b(2, 3)
     assert (
-        union(v, w)
+        monointerval_union(v, w)
         == (Monointerval.create(1, 3, v.includes_lower_bound(), w.includes_upper_bound()),)
         if v.includes_upper_bound() or w.includes_lower_bound()
         else (v, w)
     )
 
+    # touching reverse order
     v = interval_type_a(2, 3)
     w = interval_type_b(1, 2)
     assert (
-        union(v, w)
+        monointerval_union(v, w)
         == (Monointerval.create(1, 3, w.includes_lower_bound(), v.includes_upper_bound()),)
         if w.includes_upper_bound() or v.includes_lower_bound()
         else (w, v)
     )
 
+    # overlapping
     v = interval_type_a(1, 3)
     w = interval_type_b(2, 4)
-    assert union(v, w) == (
+    assert monointerval_union(v, w) == (
         Monointerval.create(1, 4, v.includes_lower_bound(), w.includes_upper_bound()),
     )
 
+    # overlapping reverse order
     v = interval_type_a(2, 4)
     w = interval_type_b(1, 3)
-    assert union(v, w) == (
+    assert monointerval_union(v, w) == (
         Monointerval.create(1, 4, w.includes_lower_bound(), v.includes_upper_bound()),
     )
 
+    # covering
     v = interval_type_a(1, 4)
     w = interval_type_b(2, 3)
-    assert union(v, w) == (v,)
+    assert monointerval_union(v, w) == (v,)
 
+    # covering reverse order
     v = interval_type_a(2, 3)
     w = interval_type_b(1, 4)
-    assert union(v, w) == (w,)
+    assert monointerval_union(v, w) == (w,)
 
-    ...
-    # todo: internal touching
+    # covering and touching lower bounds
+    v = interval_type_a(1, 2)
+    w = interval_type_b(1, 3)
+    assert monointerval_union(v, w) == (
+        Monointerval.create(
+            1, 3, v.includes_lower_bound() or w.includes_lower_bound(), w.includes_upper_bound()
+        ),
+    )
+
+    # covering and touching lower bounds reverse order
+    v = interval_type_a(1, 3)
+    w = interval_type_b(1, 2)
+    assert monointerval_union(v, w) == (
+        Monointerval.create(
+            1, 3, v.includes_lower_bound() or w.includes_lower_bound(), v.includes_upper_bound()
+        ),
+    )
+
+    # covering and touching upper bounds
+    v = interval_type_a(1, 3)
+    w = interval_type_b(2, 3)
+    assert monointerval_union(v, w) == (
+        Monointerval.create(
+            1, 3, v.includes_lower_bound(), v.includes_upper_bound() or w.includes_upper_bound()
+        ),
+    )
+
+    # covering and touching upper bounds reverse order
+    v = interval_type_a(2, 3)
+    w = interval_type_b(1, 3)
+    assert monointerval_union(v, w) == (
+        Monointerval.create(
+            1, 3, w.includes_lower_bound(), v.includes_upper_bound() or w.includes_upper_bound()
+        ),
+    )
