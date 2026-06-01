@@ -63,3 +63,13 @@ def test_infinity_sortable() -> None:
 
     letters: list[str | Infinities] = ["d", Infinity(), "b", "c", NegativeInfinity(), "a"]
     assert sorted(letters) == [NegativeInfinity(), "a", "b", "c", "d", Infinity()]
+
+
+def test_infinity_repr() -> None:
+    assert repr(Infinity()) == "INF"
+    assert repr(NegativeInfinity()) == "-INF"
+
+
+def test_infinity_str() -> None:
+    assert str(Infinity()) == "∞"
+    assert str(NegativeInfinity()) == "-∞"

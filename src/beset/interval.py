@@ -10,7 +10,7 @@ class Multiinterval[T: Sortable]:
     intervals: tuple["Monointerval[T]", ...]
 
     def __init__(self, intervals: Iterable["Monointerval[T]"]) -> None:
-        object.__setattr__(self, "intervals", intervals)
+        object.__setattr__(self, "intervals", tuple(monointervals_union(intervals)))
 
     def __setattr__(self, key, value):
         raise AttributeError(f"{self.__class__.__name__} is immutable. Cannot modify '{key}'.")
@@ -27,6 +27,44 @@ class Multiinterval[T: Sortable]:
                     return False
             case _:
                 return NotImplemented
+        
+    def intersect(self, other: "Multiinterval[T]") -> "Multiinterval[T]":
+        it1 = iter(self.intervals)
+        it2 = iter(other.intervals)
+                
+        try:
+            v1 = next(it1)
+            v2 = next(it2)
+        except StopIteration:
+            return Multiinterval(())
+
+        intervals = []
+
+        while True:
+            intervals.append(monointerval_intersect(v1, v2))
+            try:
+                if v1.stop < v2.stop:
+                    v1 = next(it1)
+                else:
+                    v2 = next(it2)
+            except StopIteration:
+                return Multiinterval(intervals)
+        
+
+    def __repr__(self) -> str:
+        intervals_str = ", ".join(map(repr, self.intervals))
+
+        if len(self.intervals) == 1:
+            extra_comma = ","
+        else:
+            extra_comma = ""
+
+        return f"{type(self).__name__}(({intervals_str}{extra_comma}))"
+
+    def __str__(self) -> str:
+        if self.empty():
+            return "<:>"
+        return " U ".join(map(str, self.intervals))
 
 
 class Monointerval[T: Sortable](Multiinterval[T], ABC):
@@ -34,7 +72,7 @@ class Monointerval[T: Sortable](Multiinterval[T], ABC):
     stop: T
 
     def __init__(self, start: T, stop: T) -> None:
-        super().__init__((self,))
+        object.__setattr__(self, "intervals", (self,))
         object.__setattr__(self, "start", start)
         object.__setattr__(self, "stop", stop)
 
@@ -49,6 +87,21 @@ class Monointerval[T: Sortable](Multiinterval[T], ABC):
 
     @abstractmethod
     def includes_upper_bound(self) -> bool: ...
+
+    @classmethod
+    def create(
+        cls, start: T, stop: T, include_lower_bound: bool, include_upper_bound: bool
+    ) -> "Monointerval[T]":
+        if include_lower_bound:
+            if include_upper_bound:
+                return ClosedInterval(start, stop)
+            else:
+                return ClosedOpenInterval(start, stop)
+        else:
+            if include_upper_bound:
+                return OpenClosedInterval(start, stop)
+            else:
+                return OpenInterval(start, stop)
 
     def __eq__(self, other: object) -> bool:
         match other:
@@ -74,23 +127,26 @@ class Monointerval[T: Sortable](Multiinterval[T], ABC):
             case _:
                 return NotImplemented
 
-    @classmethod
-    def create(
-        cls, start: T, stop: T, include_lower_bound: bool, include_upper_bound: bool
-    ) -> "Monointerval[T]":
-        if include_lower_bound:
-            if include_upper_bound:
-                return ClosedInterval(start, stop)
-            else:
-                return ClosedOpenInterval(start, stop)
-        else:
-            if include_upper_bound:
-                return OpenClosedInterval(start, stop)
-            else:
-                return OpenInterval(start, stop)
+    def intersect(self, other: Multiinterval[T]) -> Multiinterval[T]:
+        match other:
+            case Monointerval():
+                return monointerval_intersect(self, other)
+            case Multiinterval():
+                return super().intersect(other)
+
+
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.start!r}, {self.stop!r})"
+
+    def __str__(self) -> str:
+        open_bracket = "[" if self.includes_lower_bound() else "<"
+        close_bracket = "]" if self.includes_upper_bound() else ">"
+
+        if self.empty():
+            return f"{open_bracket}:{close_bracket}"
+        else:
+            return f"{open_bracket}{self.start!s} : {self.stop!s}{close_bracket}"
 
 
 class ClosedInterval[T: Sortable](Monointerval[T]):
@@ -129,7 +185,7 @@ def monointerval_union[T: Sortable](
     a: Monointerval[T], b: Monointerval[T]
 ) -> tuple[Monointerval[T]] | tuple[Monointerval[T], Monointerval[T]]:
     """
-    Returns a single monointerval or two separate ones in ascending order
+    Returns a tuple with one or two monointervals in ascending order
     """
     if a.empty():
         return (b,)
@@ -192,6 +248,17 @@ def monointervals_union[T: Sortable](
     if not last.empty():
         yield last
 
+def monointerval_intersect[T: Sortable](
+        a: Monointerval[T], b: Monointerval[T]
+) -> Monointerval[T]:
+    start, include_lower_bound = max(
+        (a.start, -a.includes_lower_bound()), (b.start, -b.includes_lower_bound())
+    )
+    stop, include_upper_bound = min(
+        (a.stop, a.includes_upper_bound()),
+        (b.stop, b.includes_upper_bound()),
+    )
+    return Monointerval.create(start, stop, include_lower_bound, include_upper_bound)
 
 Closed = ClosedInterval
 Open = OpenInterval

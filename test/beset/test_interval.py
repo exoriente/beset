@@ -1,3 +1,5 @@
+from itertools import permutations
+
 from beset.interval import (
     Closed,
     Open,
@@ -284,6 +286,99 @@ def test_monointerval_union(
 
 
 def test_monointervals_union() -> None:
+    # empty
     assert tuple(monointervals_union(())) == ()
     assert tuple(monointervals_union((EMPTY_INTERVAL,))) == ()
     assert tuple(monointervals_union((EMPTY_INTERVAL,) * 10)) == ()
+
+    # disjoint
+    for factor in range(1, 3):
+        for intervals in permutations((Open(0, 1), Closed(2, 3), Open(4, 5)) * factor):
+            assert tuple(monointervals_union(intervals)) == (Open(0, 1), Closed(2, 3), Open(4, 5))
+
+    # overlapping
+    for factor in range(1, 3):
+        for intervals in permutations((Open(0, 2), Closed(1, 4), Open(3, 5)) * factor):
+            assert tuple(monointervals_union(intervals)) == (Open(0, 5),)
+
+    # touching
+    for factor in range(1, 3):
+        for intervals in permutations((Open(0, 2), Open(2, 4), Closed(2, 3)) * factor):
+            assert tuple(monointervals_union(intervals)) == (Open(0, 4),)
+
+    # not touching
+    for factor in range(1, 3):
+        for intervals in permutations((Open(0, 2), Open(2, 4), Open(2, 3)) * factor):
+            assert tuple(monointervals_union(intervals)) == (Open(0, 2), Open(2, 4))
+
+
+def test_multiinterval_normalization() -> None:
+    assert Multiinterval(()) == EMPTY_INTERVAL
+    assert Multiinterval((EMPTY_INTERVAL,)) == EMPTY_INTERVAL
+    assert Multiinterval((EMPTY_INTERVAL,) * 10) == EMPTY_INTERVAL
+
+    # disjoint
+    for factor in range(1, 3):
+        for intervals in permutations((Open(0, 1), Closed(2, 3), Open(4, 5)) * factor):
+            assert Multiinterval(intervals) == Multiinterval((Open(0, 1), Closed(2, 3), Open(4, 5)))
+
+    # overlapping
+    for factor in range(1, 3):
+        for intervals in permutations((Open(0, 2), Closed(1, 4), Open(3, 5)) * factor):
+            assert Multiinterval(intervals) == Multiinterval((Open(0, 5),))
+
+    # touching
+    for factor in range(1, 3):
+        for intervals in permutations((Open(0, 2), Open(2, 4), Closed(2, 3)) * factor):
+            assert Multiinterval(intervals) == Multiinterval((Open(0, 4),))
+
+    # not touching
+    for factor in range(1, 3):
+        for intervals in permutations((Open(0, 2), Open(2, 4), Open(2, 3)) * factor):
+            assert Multiinterval(intervals) == Multiinterval((Open(0, 2), Open(2, 4)))
+
+@mark.parametrize("interval_type_b", [Open, Closed, ClosedOpen, OpenClosed])
+@mark.parametrize("interval_type_a", [Open, Closed, ClosedOpen, OpenClosed])
+def test_monointerval_intersection(
+    interval_type_a: type[Open | Closed | ClosedOpen | OpenClosed],
+    interval_type_b: type[Open | Closed | ClosedOpen | OpenClosed],
+) -> None:
+    # empty
+    v = interval_type_a(0, -1)
+    w = interval_type_b(0, -1)
+    assert v.intersect(w) == EMPTY_INTERVAL
+
+    # zero-length
+    v = interval_type_a(0, 0)
+    w = interval_type_b(0, 0)
+    assert v.intersect(w) == EMPTY_INTERVAL if v.empty() or w.empty() else EMPTY_INTERVAL
+
+    # disjoint
+    v = interval_type_a(0, 1)
+    w = interval_type_b(2, 3)
+    assert v.intersect(w) == EMPTY_INTERVAL
+
+    # disjoint reversed
+    v = interval_type_a(2, 3)
+    w = interval_type_b(0, 1)
+    assert v.intersect(w) == EMPTY_INTERVAL
+
+    # overlapping
+    v = interval_type_a(0, 2)
+    w = interval_type_b(1, 3)
+    assert v.intersect(w) == Monointerval.create(1,2, w.includes_lower_bound(), v.includes_upper_bound())
+
+    # overlapping reversed
+    v = interval_type_a(1, 3)
+    w = interval_type_b(0, 2)
+    assert v.intersect(w) == Monointerval.create(1,2, w.includes_lower_bound(), v.includes_upper_bound())
+
+    # touching
+    v = interval_type_a(0, 1)
+    w = interval_type_b(1, 2)
+    assert v.intersect(w) == Closed(1, 1) if v.includes_upper_bound() and w.includes_lower_bound() else EMPTY_INTERVAL
+
+    # touching internally
+    v = interval_type_a(0, 2)
+    w = interval_type_b(1, 2)
+    assert v.intersect(w) == Monointerval.create(1, 2, w.includes_lower_bound(), v.includes_upper_bound() and w.includes_upper_bound())

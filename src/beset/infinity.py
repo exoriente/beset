@@ -35,6 +35,12 @@ class Infinity(_Singleton):
             case _:
                 return True
 
+    def __repr__(self):
+        return "INF"
+
+    def __str__(self):
+        return "∞"
+
 
 class NegativeInfinity(_Singleton):
     def __neg__(self) -> "Infinity":
@@ -60,6 +66,12 @@ class NegativeInfinity(_Singleton):
 
     def __gt__(self, other: object) -> bool:
         return False
+
+    def __repr__(self):
+        return "-INF"
+
+    def __str__(self):
+        return "-∞"
 
 
 Infinities = Infinity | NegativeInfinity
