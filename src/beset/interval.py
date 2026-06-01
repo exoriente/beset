@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from typing import Any
 
+from beset.infinity import INF
 from beset.sortable import Sortable
 
 
@@ -173,10 +174,12 @@ def monointerval_union[T: Sortable](
         return b, a
 
 
-def monointervals_union[T: Sortable](intervals: Iterable[Monointerval[T]]) -> Iterable[Monointerval[T]]:
+def monointervals_union[T: Sortable](
+    intervals: Iterable[Monointerval[T]],
+) -> Iterable[Monointerval[T]]:
     ordered = sorted(intervals, key=lambda x: (x.start, -x.includes_lower_bound()))
 
-    last = OpenInterval(0, 0)  # empty
+    last: Monointerval[T] = EMPTY_INTERVAL
 
     for interval in ordered:
         result = monointerval_union(last, interval)
@@ -186,7 +189,8 @@ def monointervals_union[T: Sortable](intervals: Iterable[Monointerval[T]]) -> It
             confirmed, last = result
             yield confirmed
 
-    yield last
+    if not last.empty():
+        yield last
 
 
 Closed = ClosedInterval
@@ -195,4 +199,4 @@ ClosedOpen = ClosedOpenInterval
 OpenClosed = OpenClosedInterval
 Interval = ClosedOpenInterval
 
-EMPTY_INTERVAL = Multiinterval[Any](())
+EMPTY_INTERVAL = OpenInterval[Any](INF, -INF)

@@ -7,6 +7,7 @@ from beset.interval import (
     monointerval_union,
     Monointerval,
     EMPTY_INTERVAL,
+    monointervals_union,
 )
 from pytest import mark, raises
 
@@ -280,3 +281,9 @@ def test_monointerval_union(
             1, 3, w.includes_lower_bound(), v.includes_upper_bound() or w.includes_upper_bound()
         ),
     )
+
+
+def test_monointervals_union() -> None:
+    assert tuple(monointervals_union(())) == ()
+    assert tuple(monointervals_union((EMPTY_INTERVAL,))) == ()
+    assert tuple(monointervals_union((EMPTY_INTERVAL,) * 10)) == ()

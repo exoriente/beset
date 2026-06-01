@@ -16,7 +16,9 @@ class Infinity(_Singleton):
 
     def __eq__(self, other: object) -> bool:
         match other:
-            case Infinity() | float("inf"):
+            case Infinity():
+                return True
+            case float() if other == float("inf"):
                 return True
             case _:
                 return False
@@ -26,7 +28,9 @@ class Infinity(_Singleton):
 
     def __gt__(self, other: object) -> bool:
         match other:
-            case Infinity() | float("inf"):
+            case Infinity():
+                return False
+            case float() if other == float("inf"):
                 return False
             case _:
                 return True
@@ -38,17 +42,25 @@ class NegativeInfinity(_Singleton):
 
     def __eq__(self, other: object) -> bool:
         match other:
-            case NegativeInfinity() | float("-inf"):
+            case NegativeInfinity():
+                return True
+            case float() if other == float("-inf"):
                 return True
             case _:
                 return False
 
     def __lt__(self, other: object) -> bool:
         match other:
-            case NegativeInfinity() | float("-inf"):
+            case NegativeInfinity():
+                return False
+            case float() if other == float("-inf"):
                 return False
             case _:
                 return True
 
     def __gt__(self, other: object) -> bool:
         return False
+
+
+Infinities = Infinity | NegativeInfinity
+INF = Infinity()
