@@ -19,7 +19,8 @@ build-backend = "poetry.core.masonry.api"
 dev = [
     "mypy (>=2.1.0,<3.0.0)",
     "ruff (>=0.15.15,<0.16.0)",
-    "pytest (>=9.0.3,<10.0.0)"
+    "pytest (>=9.0.3,<10.0.0)",
+    "ty (>=0.0.42,<0.0.43)"
 ]
 
 [tool.ruff]

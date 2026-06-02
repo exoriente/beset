@@ -1,5 +1,7 @@
+from collections.abc import Set
 from itertools import permutations
 
+from beset.infinity import INF, Infinity
 from beset.interval import (
     Closed,
     Open,
@@ -17,10 +19,25 @@ def test_monointerval_immutable(
     interval_type: type[Monointerval[int]],
 ) -> None:
     with raises(AttributeError):
-        interval_type(0, 0).start = 0
+        interval_type(0, 0).intervals = ()  # type:ignore[ty:invalid-assignment,unused-ignore]
 
     with raises(AttributeError):
-        interval_type(0, 0).stop = 0
+        interval_type(0, 0).start = 0  # type:ignore[ty:invalid-assignment,unused-ignore]
+
+    with raises(AttributeError):
+        interval_type(0, 0).stop = 0  # type:ignore[ty:invalid-assignment,unused-ignore]
+
+
+@mark.parametrize("interval_type", [Open, Closed, ClosedOpen, OpenClosed])
+def test_monointerval_covariant(
+    interval_type: type[Monointerval[int]],
+) -> None:
+    """
+    mypy should be satisfied result Monointerval[bool] is a valid Multiinterval[int]
+    since bools are ints
+    """
+    result: Closed[int] = Closed[bool](False, True)
+    assert result
 
 
 @mark.parametrize("a,b", [(0, 1), (1, 2), ("a", "b"), ("b", "c")])
@@ -156,24 +173,6 @@ def test_monointerval_union(
     assert a.union(b, c) == Multiinterval((a, b, c))
 
 
-def test_monointerval_intersection_type() -> None:
-    result: Monointerval[int] = Open(0, 2).intersection(
-        Open(1, 3)
-    )  # mypy should be satisfied result is Monointerval
-    assert result == Open(1, 2)
-
-
-@mark.parametrize("interval_type_c", [Open, Closed, ClosedOpen, OpenClosed])
-@mark.parametrize("interval_type_b", [Open, Closed, ClosedOpen, OpenClosed])
-@mark.parametrize("interval_type_a", [Open, Closed, ClosedOpen, OpenClosed])
-def test_monointerval_intersection(
-    interval_type_a: type[Monointerval[int]],
-    interval_type_b: type[Monointerval[int]],
-    interval_type_c: type[Monointerval[int]],
-) -> None:
-    assert False  # todo: implement
-
-
 @mark.parametrize("interval_type_b", [Open, Closed, ClosedOpen, OpenClosed])
 @mark.parametrize("interval_type_a", [Open, Closed, ClosedOpen, OpenClosed])
 def test_monointerval_binary_intersection(
@@ -259,3 +258,30 @@ def test_monointerval_binary_intersection(
     assert v._binary_intersection(w) == Monointerval.create(
         1, 2, v.includes_lower_bound(), v.includes_upper_bound() and w.includes_upper_bound()
     )
+
+
+def test_monointerval_intersection_interval_type() -> None:
+    """
+    mypy should be satisfied result is Monointerval and not Multiinterval
+    """
+    result: Monointerval[int] = Open(0, 2).intersection(Open(1, 3))
+    assert result == Open(1, 2)
+
+
+def test_monointerval_intersection_type_peeling() -> None:
+    """
+    mypy should be satisfied result is Monointerval[int] and not Monointerval[int | Infinity()]
+    """
+    result: Monointerval[int] = Open[int | Infinity](0, INF).intersection(Open(1, 2))
+    assert result == Open(1, 2)
+
+
+@mark.parametrize("interval_type_c", [Open, Closed, ClosedOpen, OpenClosed])
+@mark.parametrize("interval_type_b", [Open, Closed, ClosedOpen, OpenClosed])
+@mark.parametrize("interval_type_a", [Open, Closed, ClosedOpen, OpenClosed])
+def test_monointerval_intersection(
+    interval_type_a: type[Monointerval[int]],
+    interval_type_b: type[Monointerval[int]],
+    interval_type_c: type[Monointerval[int]],
+) -> None:
+    assert False  # todo: implement

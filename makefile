@@ -13,7 +13,10 @@ ruff-check:
 mypy:
 	mypy $(python_paths)
 
-checks: ruff-check mypy
+ty:
+	ty check $(python_paths)
+
+checks: ruff-check mypy ty
 
 nice: format checks
 

@@ -10,10 +10,14 @@ from beset.sortable import Sortable
 
 
 class Multiinterval[T: Sortable]:
-    intervals: tuple["Monointerval[T]", ...]
+    _intervals: tuple["Monointerval[T]", ...]
+
+    @property
+    def intervals(self) -> tuple["Monointerval[T]", ...]:
+        return self._intervals
 
     def __init__(self, intervals: Iterable["Monointerval[T]"]) -> None:
-        object.__setattr__(self, "intervals", tuple(Monointerval._iterable_union(*intervals)))
+        object.__setattr__(self, "_intervals", tuple(Monointerval._iterable_union(*intervals)))
 
     def __setattr__(self, key: str, value: object) -> None:
         raise AttributeError(f"{self.__class__.__name__} is immutable. Cannot modify '{key}'.")
@@ -76,13 +80,21 @@ class Multiinterval[T: Sortable]:
 
 
 class Monointerval[T: Sortable](Multiinterval[T], ABC):
-    start: T
-    stop: T
+    _start: T
+    _stop: T
+
+    @property
+    def start(self) -> T:
+        return self._start
+
+    @property
+    def stop(self) -> T:
+        return self._stop
 
     def __init__(self, start: T, stop: T) -> None:
-        object.__setattr__(self, "intervals", (self,))
-        object.__setattr__(self, "start", start)
-        object.__setattr__(self, "stop", stop)
+        object.__setattr__(self, "_intervals", (self,))
+        object.__setattr__(self, "_start", start)
+        object.__setattr__(self, "_stop", stop)
 
     def empty(self) -> bool:
         return self.stop < self.start or (
@@ -123,10 +135,10 @@ class Monointerval[T: Sortable](Multiinterval[T], ABC):
                             return (
                                 self.includes_lower_bound() == other.includes_lower_bound()
                                 and self.includes_upper_bound() == other.includes_upper_bound()
-                                and not self.start < other.start
-                                and not other.start < self.start
-                                and not self.stop < other.stop
-                                and not other.stop < self.stop
+                                and not self.start < other.start  # type:ignore[ty:unsupported-operator,unused-ignore]
+                                and not other.start < self.start  # type:ignore[ty:unsupported-operator,unused-ignore]
+                                and not self.stop < other.stop  # type:ignore[ty:unsupported-operator,unused-ignore]
+                                and not other.stop < self.stop  # type:ignore[ty:unsupported-operator,unused-ignore]
                             )
                         except TypeError:
                             return False
@@ -200,9 +212,9 @@ class Monointerval[T: Sortable](Multiinterval[T], ABC):
         for interval in ordered:
             result = last._binary_union(interval)
             if len(result) == 1:
-                (last,) = result
+                (last,) = result  # type:ignore[ty:invalid-assignment,unused-ignore]
             else:
-                confirmed, last = result
+                confirmed, last = result  # type:ignore[ty:invalid-assignment,unused-ignore]
                 yield confirmed
 
         if not last.empty():
@@ -233,6 +245,21 @@ class Monointerval[T: Sortable](Multiinterval[T], ABC):
 
     def intersection(*others: Multiinterval[T]) -> Multiinterval[T]:
         return reduce(lambda x, y: x._binary_intersection(y), others)
+
+    @overload
+    def __and__[U: Sortable](
+        self: "Monointerval[T]", other: "Monointerval[T | U]", /
+    ) -> "Monointerval[T]": ...
+
+    @overload
+    def __and__[U: Sortable](
+        self: "Monointerval[T | U]", other: "Monointerval[T]", /
+    ) -> "Monointerval[T]": ...
+
+    def __and__[U: Sortable](
+        self: "Monointerval[T | U]", other: "Monointerval[T | U]", /
+    ) -> "Monointerval[T | U]":
+        return self.intersection(other)
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.start!r}, {self.stop!r})"
