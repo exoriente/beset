@@ -1,6 +1,11 @@
 from beset.infinity import Infinity, NegativeInfinity, Infinities
 
 
+def test_infinity_is() -> None:
+    assert Infinity() is Infinity()
+    assert NegativeInfinity() is NegativeInfinity()
+
+
 def test_infinity_eq() -> None:
     assert Infinity() == Infinity()
     assert Infinity() == float("inf")
@@ -16,7 +21,9 @@ def test_infinity_eq() -> None:
 
 def test_infinity_neg() -> None:
     assert -Infinity() == NegativeInfinity()
+    assert -Infinity() is NegativeInfinity()
     assert -NegativeInfinity() == Infinity()
+    assert -NegativeInfinity() is Infinity()
     assert not -Infinity() == Infinity()
     assert not -NegativeInfinity() == NegativeInfinity()
 

@@ -1,10 +1,11 @@
 from abc import ABC
+from typing import Self
 
 
 class _Singleton(ABC):
     _instance = None
 
-    def __new__(cls):
+    def __new__(cls) -> Self:
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -35,10 +36,10 @@ class Infinity(_Singleton):
             case _:
                 return True
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "INF"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "∞"
 
 
@@ -67,10 +68,10 @@ class NegativeInfinity(_Singleton):
     def __gt__(self, other: object) -> bool:
         return False
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "-INF"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return "-∞"
 
 

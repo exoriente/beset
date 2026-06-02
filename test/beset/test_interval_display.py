@@ -1,11 +1,11 @@
 from pytest import mark
 
-from beset.interval import Open, Closed, ClosedOpen, OpenClosed, Multiinterval
+from beset.interval import Open, Closed, ClosedOpen, OpenClosed, Multiinterval, Monointerval
 
 
 @mark.parametrize("interval_type", [Open, Closed, ClosedOpen, OpenClosed])
 def test_monointerval_repr(
-    interval_type: type[Open | Closed | ClosedOpen | OpenClosed],
+    interval_type: type[Monointerval[int]],
 ) -> None:
     assert repr(interval_type(0, 1)) == f"{interval_type.__name__}(0, 1)"
 
