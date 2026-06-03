@@ -75,5 +75,5 @@ class NegativeInfinity(_Singleton):
         return "-∞"
 
 
-Infinities = Infinity | NegativeInfinity
+InfinityTypes = Infinity | NegativeInfinity
 INF = Infinity()

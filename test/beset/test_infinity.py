@@ -1,4 +1,4 @@
-from beset.infinity import Infinity, NegativeInfinity, Infinities
+from beset.infinity import Infinity, NegativeInfinity, InfinityTypes
 
 
 def test_infinity_is() -> None:
@@ -65,10 +65,10 @@ def test_infinity_gt() -> None:
 
 
 def test_infinity_sortable() -> None:
-    numbers: list[int | Infinities] = [4, Infinity(), 2, 3, NegativeInfinity(), 1]
+    numbers: list[int | InfinityTypes] = [4, Infinity(), 2, 3, NegativeInfinity(), 1]
     assert sorted(numbers) == [NegativeInfinity(), 1, 2, 3, 4, Infinity()]
 
-    letters: list[str | Infinities] = ["d", Infinity(), "b", "c", NegativeInfinity(), "a"]
+    letters: list[str | InfinityTypes] = ["d", Infinity(), "b", "c", NegativeInfinity(), "a"]
     assert sorted(letters) == [NegativeInfinity(), "a", "b", "c", "d", Infinity()]
 
 
