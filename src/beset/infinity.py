@@ -3,7 +3,7 @@ from typing import Self
 
 
 class _Singleton(ABC):
-    _instance = None
+    _instance: Self | None = None
 
     def __new__(cls) -> Self:
         if cls._instance is None:

@@ -4,7 +4,7 @@ from itertools import chain
 from operator import attrgetter
 from typing import Iterable, Any, cast, overload
 
-from beset.infinity import INF
+from beset.infinity import INF, InfinityTypes
 from beset.sortable import Sortable
 
 
@@ -12,8 +12,7 @@ class Multiinterval[T: Sortable]:
     _intervals: tuple["Monointerval[T]", ...]
 
     def __init__(self, intervals: Iterable["Monointerval[T]"]) -> None:
-        # object.__setattr__(self, "_intervals", tuple(Monointerval._iterable_union(*intervals)))
-        object.__setattr__(self, "_intervals", tuple(intervals))
+        object.__setattr__(self, "_intervals", tuple(Monointerval._iterable_union(*intervals)))
 
     def __setattr__(self, key: str, value: object) -> None:
         raise AttributeError(f"{self.__class__.__name__} is immutable. Cannot modify '{key}'.")
@@ -64,6 +63,22 @@ class Multiinterval[T: Sortable]:
 
     def intersection[U: Sortable](*others: "Multiinterval[U]") -> "Multiinterval[T | U]":
         return reduce(Multiinterval._binary_intersection, others)
+
+    def finite(self) -> bool:
+        return len(self.intervals) == 0 or (
+            self.intervals[0].start != -INF and self.intervals[-1].stop != INF
+        )
+
+    def infinite(self) -> bool:
+        return len(self.intervals) > 0 and (
+            self.intervals[0].start == -INF or self.intervals[-1].stop == INF
+        )
+
+    def bounded[U: Sortable](self: "Multiinterval[U | InfinityTypes]") -> "Multiinterval[U]":
+        if self.infinite():
+            raise TypeError("Bounded cannot be called on infinite interval")
+
+        return cast(Multiinterval[U], self)
 
     def __repr__(self) -> str:
         intervals_str = ", ".join(map(repr, self.intervals))
@@ -190,9 +205,12 @@ class Monointerval[T: Sortable](Multiinterval[T], ABC):
             return other, self
 
     def _iterable_union[U: Sortable](*intervals: "Monointerval[U]") -> Iterable["Monointerval[U]"]:
-        ordered = sorted(intervals, key=lambda x: (x.start, -x.includes_lower_bound()))
+        ordered = iter(sorted(intervals, key=lambda x: (x.start, -x.includes_lower_bound())))
 
-        last: Monointerval[U] = EMPTY_INTERVAL
+        try:
+            last = next(ordered)
+        except StopIteration:
+            return
 
         for interval in ordered:
             result = last._binary_union(interval)
@@ -227,8 +245,29 @@ class Monointerval[T: Sortable](Multiinterval[T], ABC):
             case Multiinterval():
                 return super()._binary_intersection(other)
 
-    def intersection[U: Sortable](*others: Multiinterval[U]) -> Multiinterval[U]:
+    @overload
+    def intersection[U: Sortable](self, other: "Monointerval[U]", /) -> "Monointerval[T | U]": ...  # type:ignore[inconsistent-overload,unused-ignore]
+
+    @overload
+    def intersection[U: Sortable](*others: "Monointerval[U]") -> "Monointerval[U]": ...
+
+    @overload
+    def intersection[U: Sortable](*others: Multiinterval[U]) -> Multiinterval[U]: ...
+
+    def intersection[U: Sortable](*others: Multiinterval[U]) -> Multiinterval[U]:  # type:ignore[reportInconsistentOverload,unused-ignore]
         return reduce(lambda x, y: x._binary_intersection(y), others)
+
+    def finite(self) -> bool:
+        return self.start != -INF and self.stop != INF
+
+    def infinite(self) -> bool:
+        return self.start == -INF or self.stop == INF
+
+    def bounded[U: Sortable](self: "Monointerval[U | InfinityTypes]") -> "Monointerval[U]":
+        if self.infinite():
+            raise TypeError("Bounded cannot be called on infinite interval")
+
+        return cast(Monointerval[U], self)
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.start!r}, {self.stop!r})"

@@ -16,7 +16,15 @@ mypy:
 ty:
 	ty check $(python_paths)
 
-checks: ruff-check mypy ty
+pyright:
+	pyright $(python_paths)
+
+pyrefly:
+	pyrefly check $(python_paths)
+
+type-checks: mypy ty pyright pyrefly
+
+checks: ruff-check type-checks
 
 nice: format checks
 

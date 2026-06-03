@@ -21,7 +21,8 @@ dev = [
     "ruff (>=0.15.15,<0.16.0)",
     "pytest (>=9.0.3,<10.0.0)",
     "ty (>=0.0.42,<0.0.43)",
-    "pyright (>=1.1.410,<2.0.0)"
+    "pyright (>=1.1.410,<2.0.0)",
+    "pyrefly (>=1.0.0,<2.0.0)"
 ]
 
 [tool.ruff]
@@ -29,3 +30,9 @@ line-length = 100
 
 [tool.mypy]
 strict = true
+
+[tool.pyrefly]
+preset = "strict"
+
+[tool.pyrefly.errors]
+missing-override-decorator = false

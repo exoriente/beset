@@ -14,7 +14,7 @@ from pytest import mark, raises
 
 def test_multiinterval_immutable() -> None:
     with raises(AttributeError):
-        Multiinterval(()).intervals = ()
+        Multiinterval(()).intervals = ()  # type:ignore[ty:invalid-assignment,unused-ignore,misc]
 
 
 @mark.parametrize("interval_type", [Open, Closed, ClosedOpen, OpenClosed])
