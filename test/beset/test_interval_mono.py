@@ -286,10 +286,15 @@ def test_monointerval_bounded() -> None:
     """
     type checkers should be satisfied that result is interval of type int without InfinityTypes
     """
-    x: Open[int | InfinityTypes] = Open(-INF, 1)
-    y: Open[int | InfinityTypes] = Open(0, INF)
-    result: Monointerval[int] = x.intersection(y).bounded()
-    assert result == Open(0, 1)
+    # mypy disapproves
+    result_1: Monointerval[int] = (Open(-INF, 1) & Open(0, INF)).bounded()  # type:ignore[assignment]
+    assert result_1 == Open(0, 1)
+
+    # all approve
+    result_2: Monointerval[int] = (
+        Open[int | InfinityTypes](-INF, 1) & Open[int | InfinityTypes](0, INF)
+    ).bounded()
+    assert result_2 == Open(0, 1)
 
 
 def test_monointerval_bounded_error() -> None:

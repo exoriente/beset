@@ -246,16 +246,22 @@ class Monointerval[T: Sortable](Multiinterval[T], ABC):
                 return super()._binary_intersection(other)
 
     @overload
-    def intersection[U: Sortable](self, other: "Monointerval[U]", /) -> "Monointerval[T | U]": ...  # type:ignore[inconsistent-overload,unused-ignore]
-
-    @overload
     def intersection[U: Sortable](*others: "Monointerval[U]") -> "Monointerval[U]": ...
 
     @overload
     def intersection[U: Sortable](*others: Multiinterval[U]) -> Multiinterval[U]: ...
 
-    def intersection[U: Sortable](*others: Multiinterval[U]) -> Multiinterval[U]:  # type:ignore[reportInconsistentOverload,unused-ignore]
+    def intersection[U: Sortable](*others: Multiinterval[U]) -> Multiinterval[U]:
         return reduce(lambda x, y: x._binary_intersection(y), others)
+
+    @overload
+    def __and__[U: Sortable](self, other: "Monointerval[U]") -> "Monointerval[U]": ...
+
+    @overload
+    def __and__[U: Sortable](self, other: Multiinterval[U]) -> Multiinterval[U]: ...
+
+    def __and__[U: Sortable](self, other: Multiinterval[U]) -> Multiinterval[T | U]:
+        return self._binary_intersection(other)
 
     def finite(self) -> bool:
         return self.start != -INF and self.stop != INF
