@@ -12,13 +12,13 @@ from beset.interval import (
 from pytest import mark, raises
 
 
-def test_IntervalSet_immutable() -> None:
+def test_interval_set_immutable() -> None:
     with raises(AttributeError):
         IntervalSet(()).intervals = ()  # type:ignore[ty:invalid-assignment,unused-ignore,misc]
 
 
 @mark.parametrize("interval_type", [Open, Closed, ClosedOpen, OpenClosed])
-def test_IntervalSet_eq(
+def test_interval_set_eq(
     interval_type: type[ConcreteInterval[int]],
 ) -> None:
     assert IntervalSet(()) == IntervalSet(())
@@ -35,7 +35,7 @@ def test_IntervalSet_eq(
 
 
 @mark.parametrize("interval_type", [Open, Closed, ClosedOpen, OpenClosed])
-def test_IntervalSet_eq_Interval(
+def test_interval_set_eq_interval(
     interval_type: type[ConcreteInterval[int]],
 ) -> None:
     assert IntervalSet(()) == EMPTY_INTERVAL
@@ -43,7 +43,7 @@ def test_IntervalSet_eq_Interval(
     assert IntervalSet((interval_type(0, 1),)) == interval_type(0, 1)
 
 
-def test_IntervalSet_normalization() -> None:
+def test_interval_set_simplification() -> None:
     assert IntervalSet(()) == EMPTY_INTERVAL
     assert IntervalSet((EMPTY_INTERVAL,)) == EMPTY_INTERVAL
     assert IntervalSet((EMPTY_INTERVAL,) * 10) == EMPTY_INTERVAL

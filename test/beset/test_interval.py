@@ -15,7 +15,7 @@ from pytest import mark, raises
 
 
 @mark.parametrize("interval_type", [Open, Closed, ClosedOpen, OpenClosed])
-def test_Interval_immutable(
+def test_interval_immutable(
     interval_type: type[ConcreteInterval[int]],
 ) -> None:
     with raises(AttributeError):
@@ -29,17 +29,17 @@ def test_Interval_immutable(
 
 
 @mark.parametrize("interval_type", [Open, Closed, ClosedOpen, OpenClosed])
-def test_Interval_instance_of_IntervalSet(
+def test_interval_instance_of_interval_set(
     interval_type: type[ConcreteInterval[int]],
 ) -> None:
     """
-    type checkers should be satisfied a
+    type checkers should be satisfied an interval is an interval set
     """
     result: IntervalSet[int] = interval_type(0, 1)
     assert result
 
 
-def test_Interval_covariant() -> None:
+def test_interval_covariant() -> None:
     """
     type checkers should be satisfied result Interval[bool] is a valid IntervalSet[int]
     since bools are ints
@@ -55,7 +55,7 @@ def test_Interval_covariant() -> None:
 
 
 @mark.parametrize("a,b", [(0, 1), (1, 2), ("a", "b"), ("b", "c")])
-def test_Interval_empty(a: int | str, b: int | str) -> None:
+def test_interval_empty(a: int | str, b: int | str) -> None:
     assert Closed(b, a).empty()
     assert not Closed(b, b).empty()
     assert not Closed(a, b).empty()
@@ -74,7 +74,7 @@ def test_Interval_empty(a: int | str, b: int | str) -> None:
 
 
 @mark.parametrize("a,b", [(0, 0), (1, 1), ("a", "a"), ("b", "b")])
-def test_Interval_eq_empty(a: int | str, b: int | str) -> None:
+def test_interval_eq_empty(a: int | str, b: int | str) -> None:
     assert Open(a, b) == Open(a, b)
     assert not Open(a, b) == Closed(a, b)
     assert Open(a, b) == ClosedOpen(a, b)
@@ -97,7 +97,7 @@ def test_Interval_eq_empty(a: int | str, b: int | str) -> None:
 
 
 @mark.parametrize("a,b", [(0, 1), (1, 2), ("a", "b"), ("b", "c")])
-def test_Interval_eq_not_empty(a: int | str, b: int | str) -> None:
+def test_interval_eq_not_empty(a: int | str, b: int | str) -> None:
     assert Open(a, b) == Open(a, b)
     assert not Open(a, b) == Closed(a, b)
     assert not Open(a, b) == ClosedOpen(a, b)
@@ -119,15 +119,15 @@ def test_Interval_eq_not_empty(a: int | str, b: int | str) -> None:
     assert OpenClosed(a, b) == OpenClosed(a, b)
 
 
-def test_Interval_eq_different_type() -> None:
+def test_interval_eq_different_type() -> None:
     assert Open(1, 2) != Open("1", "2")
 
 
-def test_Intervals_iterable_union_as_method() -> None:
+def test_intervals_iterable_union_as_method() -> None:
     assert tuple(Open(1, 2)._iterable_union(Closed(3, 4))) == (Open(1, 2), Closed(3, 4))
 
 
-def test_Intervals_iterable_union() -> None:
+def test_intervals_iterable_union() -> None:
     # empty
     assert tuple(Interval._iterable_union()) == ()
     assert tuple(Interval._iterable_union(EMPTY_INTERVAL)) == ()
@@ -161,7 +161,7 @@ def test_Intervals_iterable_union() -> None:
 @mark.parametrize("interval_type_c", [Open, Closed, ClosedOpen, OpenClosed])
 @mark.parametrize("interval_type_b", [Open, Closed, ClosedOpen, OpenClosed])
 @mark.parametrize("interval_type_a", [Open, Closed, ClosedOpen, OpenClosed])
-def test_Interval_union(
+def test_interval_union(
     interval_type_a: type[ConcreteInterval[int]],
     interval_type_b: type[ConcreteInterval[int]],
     interval_type_c: type[ConcreteInterval[int]],
@@ -187,7 +187,7 @@ def test_Interval_union(
 
 @mark.parametrize("interval_type_b", [Open, Closed, ClosedOpen, OpenClosed])
 @mark.parametrize("interval_type_a", [Open, Closed, ClosedOpen, OpenClosed])
-def test_Interval_binary_intersection(
+def test_interval_binary_intersection(
     interval_type_a: type[ConcreteInterval[int]],
     interval_type_b: type[ConcreteInterval[int]],
 ) -> None:
@@ -268,7 +268,7 @@ def test_Interval_binary_intersection(
     )
 
 
-def test_Interval_intersection_interval_type() -> None:
+def test_interval_intersection_interval_type() -> None:
     """
     type checkers should be satisfied result is Interval and not IntervalSet
     """
@@ -276,7 +276,7 @@ def test_Interval_intersection_interval_type() -> None:
     assert result == Open(1, 2)
 
 
-def test_Interval_bounded() -> None:
+def test_interval_bounded() -> None:
     """
     type checkers should be satisfied that result is interval of type int without InfinityTypes
     """
@@ -289,7 +289,7 @@ def test_Interval_bounded() -> None:
     assert result_2 == Open(0, 1)
 
 
-def test_Interval_bounded_error() -> None:
+def test_interval_bounded_error() -> None:
     """
     type checkers should be satisfied that result is interval of type int without InfinityTypes
     """
@@ -302,7 +302,7 @@ def test_Interval_bounded_error() -> None:
 # @mark.parametrize("interval_type_c", [Open, Closed, ClosedOpen, OpenClosed])
 # @mark.parametrize("interval_type_b", [Open, Closed, ClosedOpen, OpenClosed])
 # @mark.parametrize("interval_type_a", [Open, Closed, ClosedOpen, OpenClosed])
-# def test_Interval_intersection(
+# def test_interval_intersection(
 #     interval_type_a: type[_ConcreteIntervalBase[int]],
 #     interval_type_b: type[_ConcreteIntervalBase[int]],
 #     interval_type_c: type[_ConcreteIntervalBase[int]],

@@ -179,7 +179,7 @@ class Interval[T: Sortable](IntervalSet[T], metaclass=_IntervalMeta):
         self, other: "Interval[U]"
     ) -> tuple["Interval[T | U]"] | tuple["Interval[T | U]", "Interval[T | U]"]:
         """
-        Returns a tuple with one or two Intervals in ascending order
+        Returns a tuple with one or two intervals in ascending order
         """
         if self.empty():
             return (other,)
