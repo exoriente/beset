@@ -105,6 +105,15 @@ def test_interval_eq_empty(a: int | str, b: int | str) -> None:
     assert OpenClosed(a, b) == OpenClosed(a, b)
 
 
+@mark.parametrize("interval_type_b", [Open, Closed, ClosedOpen, OpenClosed])
+@mark.parametrize("interval_type_a", [Open, Closed, ClosedOpen, OpenClosed])
+def test_interval_eq_empty_different_types(
+    interval_type_a: type[ConcreteInterval[int]],
+    interval_type_b: type[ConcreteInterval[int]],
+) -> None:
+    assert interval_type_a(1, 0) == interval_type_b(2, 0)
+
+
 @mark.parametrize("a,b", [(0, 1), (1, 2), ("a", "b"), ("b", "c")])
 def test_interval_eq_not_empty(a: int | str, b: int | str) -> None:
     assert Open(a, b) == Open(a, b)
@@ -128,8 +137,85 @@ def test_interval_eq_not_empty(a: int | str, b: int | str) -> None:
     assert OpenClosed(a, b) == OpenClosed(a, b)
 
 
+@mark.parametrize("interval_type_b", [Open, Closed, ClosedOpen, OpenClosed])
+@mark.parametrize("interval_type_a", [Open, Closed, ClosedOpen, OpenClosed])
+def test_interval_hash_unbounded_different_types(
+    interval_type_a: type[ConcreteInterval[Any]],
+    interval_type_b: type[ConcreteInterval[Any]],
+) -> None:
+    assert interval_type_a(-INF, INF) == interval_type_b(-INF, INF)
+
+
 def test_interval_eq_different_type() -> None:
     assert Open(1, 2) != Open("1", "2")
+
+
+@mark.parametrize("a,b", [(0, 0), (1, 1), ("a", "a"), ("b", "b")])
+def test_interval_hash_empty(a: int | str, b: int | str) -> None:
+    assert hash(Open(a, b)) == hash(Open(a, b))
+    assert not hash(Open(a, b)) == hash(Closed(a, b))
+    assert hash(Open(a, b)) == hash(ClosedOpen(a, b))
+    assert hash(Open(a, b)) == hash(OpenClosed(a, b))
+
+    assert not hash(Closed(a, b)) == hash(Open(a, b))
+    assert hash(Closed(a, b)) == hash(Closed(a, b))
+    assert not hash(Closed(a, b)) == hash(ClosedOpen(a, b))
+    assert not hash(Closed(a, b)) == hash(OpenClosed(a, b))
+
+    assert hash(ClosedOpen(a, b)) == hash(Open(a, b))
+    assert not hash(ClosedOpen(a, b)) == hash(Closed(a, b))
+    assert hash(ClosedOpen(a, b)) == hash(ClosedOpen(a, b))
+    assert hash(ClosedOpen(a, b)) == hash(OpenClosed(a, b))
+
+    assert hash(OpenClosed(a, b)) == hash(Open(a, b))
+    assert not hash(OpenClosed(a, b)) == hash(Closed(a, b))
+    assert hash(OpenClosed(a, b)) == hash(ClosedOpen(a, b))
+    assert hash(OpenClosed(a, b)) == hash(OpenClosed(a, b))
+
+
+@mark.parametrize("interval_type_b", [Open, Closed, ClosedOpen, OpenClosed])
+@mark.parametrize("interval_type_a", [Open, Closed, ClosedOpen, OpenClosed])
+def test_interval_hash_empty_different_types(
+    interval_type_a: type[ConcreteInterval[int]],
+    interval_type_b: type[ConcreteInterval[int]],
+) -> None:
+    assert hash(interval_type_a(1, 0)) == hash(interval_type_b(2, 0))
+
+
+@mark.parametrize("a,b", [(0, 1), (1, 2), ("a", "b"), ("b", "c")])
+def test_interval_hash_not_empty(a: int | str, b: int | str) -> None:
+    assert hash(Open(a, b)) == hash(Open(a, b))
+    assert not hash(Open(a, b)) == hash(Closed(a, b))
+    assert not hash(Open(a, b)) == hash(ClosedOpen(a, b))
+    assert not hash(Open(a, b)) == hash(OpenClosed(a, b))
+
+    assert not hash(Closed(a, b)) == hash(Open(a, b))
+    assert hash(Closed(a, b)) == hash(Closed(a, b))
+    assert not hash(Closed(a, b)) == hash(ClosedOpen(a, b))
+    assert not hash(Closed(a, b)) == hash(OpenClosed(a, b))
+
+    assert not hash(ClosedOpen(a, b)) == hash(Open(a, b))
+    assert not hash(ClosedOpen(a, b)) == hash(Closed(a, b))
+    assert hash(ClosedOpen(a, b)) == hash(ClosedOpen(a, b))
+    assert not hash(ClosedOpen(a, b)) == hash(OpenClosed(a, b))
+
+    assert not hash(OpenClosed(a, b)) == hash(Open(a, b))
+    assert not hash(OpenClosed(a, b)) == hash(Closed(a, b))
+    assert not hash(OpenClosed(a, b)) == hash(ClosedOpen(a, b))
+    assert hash(OpenClosed(a, b)) == hash(OpenClosed(a, b))
+
+
+@mark.parametrize("interval_type_b", [Open, Closed, ClosedOpen, OpenClosed])
+@mark.parametrize("interval_type_a", [Open, Closed, ClosedOpen, OpenClosed])
+def test_interval_eq_unbounded_different_types(
+    interval_type_a: type[ConcreteInterval[Any]],
+    interval_type_b: type[ConcreteInterval[Any]],
+) -> None:
+    assert hash(interval_type_a(-INF, INF)) == hash(interval_type_b(-INF, INF))
+
+
+def test_interval_hash_different_type() -> None:
+    assert hash(Open(1, 2)) != hash(Open("1", "2"))
 
 
 @mark.parametrize("interval_type", [Open, Closed, ClosedOpen, OpenClosed])

@@ -24,6 +24,9 @@ class Infinity(_Singleton):
             case _:
                 return False
 
+    def __hash__(self) -> int:
+        return hash(float("inf"))
+
     def __lt__(self, other: object) -> bool:
         return False
 
@@ -55,6 +58,9 @@ class NegativeInfinity(_Singleton):
                 return True
             case _:
                 return False
+
+    def __hash__(self) -> int:
+        return hash(float("-inf"))
 
     def __lt__(self, other: object) -> bool:
         match other:

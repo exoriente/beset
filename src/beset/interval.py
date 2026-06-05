@@ -41,6 +41,9 @@ class IntervalSet[T: Sortable]:
             case _:
                 return NotImplemented
 
+    def __hash__(self) -> int:
+        return hash((IntervalSet, *filter(None, map(Interval._hash_data, self.intervals))))
+
     def _binary_intersection[U: Sortable](self, other: "IntervalSet[U | InfinityTypes]") -> "IntervalSet[T | U]":
         it1 = iter(self.intervals)
         it2 = iter(other.intervals)
@@ -238,6 +241,20 @@ class Interval[T: Sortable](IntervalSet[T], metaclass=_IntervalMeta):
                         return super().__eq__(other)
             case _:
                 return NotImplemented
+
+    def __hash__(self) -> int:
+        return super().__hash__()
+
+    def _hash_data(self) -> tuple[T, T, bool | None, bool | None] | None:
+        if self.empty():
+            return None
+        else:
+            return (
+                self.start,
+                self.stop,
+                None if self.start == -INF else self.includes_lower_bound(),
+                None if self.stop == INF else self.includes_upper_bound(),
+            )
 
     def __contains__(self, item: object) -> bool:
         # abstract

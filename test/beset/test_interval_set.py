@@ -46,6 +46,34 @@ def test_interval_set_eq_interval(
     assert IntervalSet((interval_type(0, 1),)) == interval_type(0, 1)
 
 
+@mark.parametrize("interval_type", [Open, Closed, ClosedOpen, OpenClosed])
+def test_interval_set_hash(
+    interval_type: type[ConcreteInterval[int]],
+) -> None:
+    assert hash(IntervalSet(())) == hash(IntervalSet(()))
+    assert not hash(IntervalSet(())) == hash(IntervalSet((interval_type(0, 1),)))
+    assert hash(IntervalSet((interval_type(0, 1),))) == hash(IntervalSet((interval_type(0, 1),)))
+    assert not hash(IntervalSet((interval_type(0, 1),))) == hash(IntervalSet((interval_type(0, 2),)))
+    assert not hash(IntervalSet((interval_type(0, 1),))) == hash(
+        IntervalSet((interval_type(0, 1), interval_type(1, 2)))
+    )
+    assert hash(IntervalSet((interval_type(0, 1), interval_type(1, 2)))) == hash(
+        IntervalSet((interval_type(0, 1), interval_type(1, 2)))
+    )
+    assert not hash(IntervalSet((interval_type(0, 1), interval_type(1, 2)))) == hash(
+        IntervalSet((interval_type(0, 1), interval_type(1, 3)))
+    )
+
+
+@mark.parametrize("interval_type", [Open, Closed, ClosedOpen, OpenClosed])
+def test_interval_set_hash_interval(
+    interval_type: type[ConcreteInterval[int]],
+) -> None:
+    assert hash(IntervalSet(())) == hash(EMPTY_INTERVAL)
+    assert hash(EMPTY_INTERVAL) == hash(IntervalSet(()))
+    assert hash(IntervalSet((interval_type(0, 1),))) == hash(interval_type(0, 1))
+
+
 def test_interval_set_simplification() -> None:
     assert IntervalSet(()) == EMPTY_INTERVAL
     assert IntervalSet((EMPTY_INTERVAL,)) == EMPTY_INTERVAL

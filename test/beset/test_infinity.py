@@ -19,6 +19,19 @@ def test_infinity_eq() -> None:
     assert not NegativeInfinity() == object()
 
 
+def test_infinity_hash() -> None:
+    assert hash(Infinity()) == hash(Infinity())
+    assert hash(Infinity()) == hash(float("inf"))
+    assert hash(NegativeInfinity()) == hash(NegativeInfinity())
+    assert hash(NegativeInfinity()) == hash(float("-inf"))
+    assert not hash(Infinity()) == hash(0)
+    assert not hash(Infinity()) == hash("a")
+    assert not hash(Infinity()) == hash(object())
+    assert not hash(NegativeInfinity()) == hash(0)
+    assert not hash(NegativeInfinity()) == hash("a")
+    assert not hash(NegativeInfinity()) == hash(object())
+
+
 def test_infinity_neg() -> None:
     assert -Infinity() == NegativeInfinity()
     assert -Infinity() is NegativeInfinity()
