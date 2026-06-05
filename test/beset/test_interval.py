@@ -313,7 +313,12 @@ def test_interval_binary_intersection(
     # zero-length
     v = interval_type_a(0, 0)
     w = interval_type_b(0, 0)
-    assert v._binary_intersection(w) == EMPTY_INTERVAL if v.empty() or w.empty() else EMPTY_INTERVAL
+    assert v._binary_intersection(w) == Interval(
+        0,
+        0,
+        v.includes_lower_bound() and w.includes_lower_bound(),
+        v.includes_upper_bound() and w.includes_upper_bound(),
+    )
 
     # disjoint
     v = interval_type_a(0, 1)
@@ -338,19 +343,15 @@ def test_interval_binary_intersection(
     # touching
     v = interval_type_a(0, 1)
     w = interval_type_b(1, 2)
-    assert (
-        v._binary_intersection(w) == Closed(1, 1)
-        if v.includes_upper_bound() and w.includes_lower_bound()
-        else EMPTY_INTERVAL
+    assert v._binary_intersection(w) == (
+        Closed(1, 1) if v.includes_upper_bound() and w.includes_lower_bound() else EMPTY_INTERVAL
     )
 
     # touching reversed
     v = interval_type_a(1, 2)
     w = interval_type_b(0, 1)
-    assert (
-        v._binary_intersection(w) == Closed(1, 1)
-        if v.includes_lower_bound() and w.includes_upper_bound()
-        else EMPTY_INTERVAL
+    assert v._binary_intersection(w) == (
+        Closed(1, 1) if v.includes_lower_bound() and w.includes_upper_bound() else EMPTY_INTERVAL
     )
 
     # touching lower bound internally

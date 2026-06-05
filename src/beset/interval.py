@@ -32,6 +32,9 @@ class IntervalSet[T: Sortable]:
     def empty(self) -> bool:
         return len(self.intervals) == 0
 
+    def __bool__(self) -> bool:
+        return not self.empty()
+
     def __eq__(self, other: object) -> bool:
         match other:
             case IntervalSet():
@@ -139,6 +142,33 @@ class IntervalSet[T: Sortable]:
 
     def __sub__[U: Sortable](self, other: "IntervalSet[U | InfinityTypes]") -> "IntervalSet[T | U]":
         return self.difference(other)
+
+    def isdisjoint[U: Sortable](self, other: "IntervalSet[U]", /) -> bool:
+        return self & other == EMPTY_INTERVAL
+
+    def issubset[U: Sortable](self, other: "IntervalSet[U]", /) -> bool:
+        return self - other == EMPTY_INTERVAL
+
+    def __le__[U: Sortable](self, other: "IntervalSet[U]", /) -> bool:
+        return self.issubset(other)
+
+    def __lt__[U: Sortable](self, other: "IntervalSet[U]", /) -> bool:
+        return self.issubset(other) and self != other
+
+    def issuperset[U: Sortable](self, other: "IntervalSet[U]", /) -> bool:
+        return other - self == EMPTY_INTERVAL
+
+    def __ge__[U: Sortable](self, other: "IntervalSet[U]", /) -> bool:
+        return self.issuperset(other)
+
+    def __gt__[U: Sortable](self, other: "IntervalSet[U]", /) -> bool:
+        return self.issuperset(other) and self != other
+
+    def symmetric_difference[U: Sortable](self, other: "IntervalSet[U]", /) -> "IntervalSet[T | U]":
+        return (self | other) - (self & other)  # pyrefly:ignore[bad-return]
+
+    def __xor__[U: Sortable](self, other: "IntervalSet[U]", /) -> "IntervalSet[T | U]":
+        return self.symmetric_difference(other)
 
     def finite(self) -> bool:
         return len(self.intervals) == 0 or (self.intervals[0].start != -INF and self.intervals[-1].stop != INF)
