@@ -229,6 +229,14 @@ def test_contains(interval_type: type[ConcreteInterval[int]]) -> None:
     assert "a" not in interval
 
 
+def test_contains_empty() -> None:
+    assert 0 not in EMPTY_INTERVAL
+
+
+def test_contains_different_type() -> None:
+    assert "a" not in (Open(0, 1) | Open(2, 3))
+
+
 def test_intervals_iterable_union_as_method() -> None:
     assert tuple(Open(1, 2)._iterable_union(Closed(3, 4))) == (Open(1, 2), Closed(3, 4))
 
@@ -472,6 +480,7 @@ def test_interval_difference() -> None:
     assert EMPTY_INTERVAL - EMPTY_INTERVAL == EMPTY_INTERVAL
     assert Closed(0, 10) - EMPTY_INTERVAL == Closed(0, 10)
     assert Closed(0, 10) - Open(2, 3) == Closed(0, 2) | Closed(3, 10)
+    assert Closed(0, 10) - Open(0, 10) == Closed(0, 0) | Closed(10, 10)
     assert Closed(0, 10).difference(Open(2, 3), Closed(5, 6)) == Closed(0, 2) | ClosedOpen(3, 5) | OpenClosed(6, 10)
     assert Closed(0, 10).difference(Open(-INF, 2), Open(8, INF)) == Closed(2, 8)
     assert Closed(0, 10).difference(Closed(4, 4), Closed(6, 6)) == ClosedOpen(0, 4) | Open(4, 6) | OpenClosed(6, 10)

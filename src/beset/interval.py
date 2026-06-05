@@ -1,3 +1,4 @@
+from bisect import bisect_right
 from functools import reduce
 from itertools import chain, pairwise
 from operator import attrgetter
@@ -43,6 +44,20 @@ class IntervalSet[T: Sortable]:
 
     def __hash__(self) -> int:
         return hash((IntervalSet, *filter(None, map(Interval._hash_data, self.intervals))))
+
+    def __contains__(self, item: object) -> bool:
+        try:
+            index = bisect_right(self.intervals, item, key=lambda x: x.stop)  # type:ignore[ty:no-matching-overload,unused-ignore,call-overload]
+        except TypeError:
+            return False
+
+        if self.intervals and index > 0 and item in self.intervals[index - 1]:
+            return True
+
+        if len(self.intervals) > index and item in self.intervals[index]:
+            return True
+
+        return False
 
     def _binary_intersection[U: Sortable](self, other: "IntervalSet[U | InfinityTypes]") -> "IntervalSet[T | U]":
         it1 = iter(self.intervals)
@@ -193,7 +208,19 @@ class Interval[T: Sortable](IntervalSet[T], metaclass=_IntervalMeta):
     _stop: T
 
     def __init__(self, start: T, stop: T, include_lower_bound: bool, include_upper_bound: bool) -> None:
-        # never actually called
+        """
+        Interval is an abstract class representing a continuous interval and does not consist
+        of disjoint subintervals. Being abstract, it does not return objects of type Interval,
+        but instead of one of its four subclasses (OpenInterval, ClosedInterval,
+        OpenClosedInterval, ClosedOpenInterval) depending on the values of the
+        include_lower_bound and include_upper_bound arguments.
+
+        :param start: the lower bound
+        :param stop: the upper bound
+        :param include_lower_bound: true if the interval is closed on the left, false if open
+        :param include_upper_bound: true if the interval is closed on the right, false if open
+        """
+
         raise NotImplementedError
 
     @property
@@ -204,10 +231,14 @@ class Interval[T: Sortable](IntervalSet[T], metaclass=_IntervalMeta):
     def stop(self) -> T:
         return self._stop
 
-    def includes_lower_bound(self) -> bool:
+    @staticmethod
+    def includes_lower_bound() -> bool:
+        # abstract method
         raise NotImplementedError
 
-    def includes_upper_bound(self) -> bool:
+    @staticmethod
+    def includes_upper_bound() -> bool:
+        # abstract method
         raise NotImplementedError
 
     def empty(self) -> bool:
@@ -257,7 +288,7 @@ class Interval[T: Sortable](IntervalSet[T], metaclass=_IntervalMeta):
             )
 
     def __contains__(self, item: object) -> bool:
-        # abstract
+        # abstract method
         raise NotImplementedError
 
     def _binary_union[U: Sortable](
@@ -417,10 +448,12 @@ class ConcreteInterval[T: Sortable](Interval[T]):
 
 
 class ClosedInterval[T: Sortable](ConcreteInterval[T]):
-    def includes_lower_bound(self) -> bool:
+    @staticmethod
+    def includes_lower_bound() -> bool:
         return True
 
-    def includes_upper_bound(self) -> bool:
+    @staticmethod
+    def includes_upper_bound() -> bool:
         return True
 
     def __contains__(self, item: object) -> bool:
@@ -431,10 +464,12 @@ class ClosedInterval[T: Sortable](ConcreteInterval[T]):
 
 
 class OpenInterval[T: Sortable](ConcreteInterval[T]):
-    def includes_lower_bound(self) -> bool:
+    @staticmethod
+    def includes_lower_bound() -> bool:
         return False
 
-    def includes_upper_bound(self) -> bool:
+    @staticmethod
+    def includes_upper_bound() -> bool:
         return False
 
     def __contains__(self, item: object) -> bool:
@@ -445,10 +480,12 @@ class OpenInterval[T: Sortable](ConcreteInterval[T]):
 
 
 class ClosedOpenInterval[T: Sortable](ConcreteInterval[T]):
-    def includes_lower_bound(self) -> bool:
+    @staticmethod
+    def includes_lower_bound() -> bool:
         return True
 
-    def includes_upper_bound(self) -> bool:
+    @staticmethod
+    def includes_upper_bound() -> bool:
         return False
 
     def __contains__(self, item: object) -> bool:
@@ -459,10 +496,12 @@ class ClosedOpenInterval[T: Sortable](ConcreteInterval[T]):
 
 
 class OpenClosedInterval[T: Sortable](ConcreteInterval[T]):
-    def includes_lower_bound(self) -> bool:
+    @staticmethod
+    def includes_lower_bound() -> bool:
         return False
 
-    def includes_upper_bound(self) -> bool:
+    @staticmethod
+    def includes_upper_bound() -> bool:
         return True
 
     def __contains__(self, item: object) -> bool:
