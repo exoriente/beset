@@ -1,4 +1,5 @@
 from itertools import permutations
+from typing import Any
 
 from beset.infinity import INF, InfinityTypes
 from beset.interval import (
@@ -71,6 +72,12 @@ def test_interval_empty(a: int | str, b: int | str) -> None:
     assert OpenClosed(b, a).empty()
     assert OpenClosed(b, b).empty()
     assert not OpenClosed(a, b).empty()
+
+
+@mark.parametrize("interval_type", [Open, Closed, ClosedOpen, OpenClosed])
+def test_interval_empty_infinity(interval_type: type[ConcreteInterval[Any]]) -> None:
+    assert interval_type(-INF, -INF).empty()
+    assert interval_type(INF, INF).empty()
 
 
 @mark.parametrize("a,b", [(0, 0), (1, 1), ("a", "a"), ("b", "b")])
@@ -268,6 +275,17 @@ def test_interval_binary_intersection(
     )
 
 
+# @mark.parametrize("interval_type_c", [Open, Closed, ClosedOpen, OpenClosed])
+# @mark.parametrize("interval_type_b", [Open, Closed, ClosedOpen, OpenClosed])
+# @mark.parametrize("interval_type_a", [Open, Closed, ClosedOpen, OpenClosed])
+# def test_interval_intersection(
+#     interval_type_a: type[_ConcreteIntervalBase[int]],
+#     interval_type_b: type[_ConcreteIntervalBase[int]],
+#     interval_type_c: type[_ConcreteIntervalBase[int]],
+# ) -> None:
+#     assert False  # todo: implement
+
+
 def test_interval_intersection_interval_type() -> None:
     """
     type checkers should be satisfied result is Interval and not IntervalSet
@@ -290,21 +308,19 @@ def test_interval_bounded() -> None:
 
 
 def test_interval_bounded_error() -> None:
-    """
-    type checkers should be satisfied that result is interval of type int without InfinityTypes
-    """
     with raises(TypeError):
         Open(-INF, 0).bounded()
     with raises(TypeError):
         Open(0, INF).bounded()
 
 
-# @mark.parametrize("interval_type_c", [Open, Closed, ClosedOpen, OpenClosed])
-# @mark.parametrize("interval_type_b", [Open, Closed, ClosedOpen, OpenClosed])
-# @mark.parametrize("interval_type_a", [Open, Closed, ClosedOpen, OpenClosed])
-# def test_interval_intersection(
-#     interval_type_a: type[_ConcreteIntervalBase[int]],
-#     interval_type_b: type[_ConcreteIntervalBase[int]],
-#     interval_type_c: type[_ConcreteIntervalBase[int]],
-# ) -> None:
-#     assert False  # todo: implement
+def test_interval_complement() -> None:
+    assert ~EMPTY_INTERVAL == Closed(-INF, INF)
+    assert ~Open(-INF, 0) == Closed(0, INF)
+    assert ~ClosedOpen(-INF, 0) == ClosedOpen(0, INF)
+    assert ~OpenClosed(-INF, 0) == OpenClosed(0, INF)
+    assert ~Closed(-INF, 0) == Open(0, INF)
+    assert ~Open(0, INF) == Closed(-INF, 0)
+    assert ~ClosedOpen(0, INF) == ClosedOpen(-INF, 0)
+    assert ~OpenClosed(0, INF) == OpenClosed(-INF, 0)
+    assert ~Closed(0, INF) == Open(-INF, 0)
