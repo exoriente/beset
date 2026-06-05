@@ -6,10 +6,9 @@ from beset.interval import (
     Open,
     ClosedOpen,
     OpenClosed,
-    Interval,
     EMPTY_INTERVAL,
     IntervalSet,
-    new_interval,
+    Interval,
     ConcreteInterval,
 )
 from pytest import mark, raises
@@ -177,7 +176,7 @@ def test_Interval_union(
     a = interval_type_a(0, 2)
     b = interval_type_b(1, 4)
     c = interval_type_c(3, 5)
-    assert a.union(b, c) == IntervalSet((new_interval(0, 5, a.includes_lower_bound(), c.includes_upper_bound()),))
+    assert a.union(b, c) == IntervalSet((Interval(0, 5, a.includes_lower_bound(), c.includes_upper_bound()),))
 
     # disjoint
     a = interval_type_a(0, 1)
@@ -215,12 +214,12 @@ def test_Interval_binary_intersection(
     # overlapping
     v = interval_type_a(0, 2)
     w = interval_type_b(1, 3)
-    assert v._binary_intersection(w) == new_interval(1, 2, w.includes_lower_bound(), v.includes_upper_bound())
+    assert v._binary_intersection(w) == Interval(1, 2, w.includes_lower_bound(), v.includes_upper_bound())
 
     # overlapping reversed
     v = interval_type_a(1, 3)
     w = interval_type_b(0, 2)
-    assert v._binary_intersection(w) == new_interval(1, 2, v.includes_lower_bound(), w.includes_upper_bound())
+    assert v._binary_intersection(w) == Interval(1, 2, v.includes_lower_bound(), w.includes_upper_bound())
 
     # touching
     v = interval_type_a(0, 1)
@@ -243,28 +242,28 @@ def test_Interval_binary_intersection(
     # touching lower bound internally
     v = interval_type_a(0, 1)
     w = interval_type_b(0, 2)
-    assert v._binary_intersection(w) == new_interval(
+    assert v._binary_intersection(w) == Interval(
         0, 1, v.includes_lower_bound() and w.includes_lower_bound(), v.includes_upper_bound()
     )
 
     # touching lower bound internally reversed
     v = interval_type_a(0, 2)
     w = interval_type_b(0, 1)
-    assert v._binary_intersection(w) == new_interval(
+    assert v._binary_intersection(w) == Interval(
         0, 1, v.includes_lower_bound() and w.includes_lower_bound(), w.includes_upper_bound()
     )
 
     # touching upper bound internally
     v = interval_type_a(0, 2)
     w = interval_type_b(1, 2)
-    assert v._binary_intersection(w) == new_interval(
+    assert v._binary_intersection(w) == Interval(
         1, 2, w.includes_lower_bound(), v.includes_upper_bound() and w.includes_upper_bound()
     )
 
     # touching upper bound internally reversed
     v = interval_type_a(1, 2)
     w = interval_type_b(0, 2)
-    assert v._binary_intersection(w) == new_interval(
+    assert v._binary_intersection(w) == Interval(
         1, 2, v.includes_lower_bound(), v.includes_upper_bound() and w.includes_upper_bound()
     )
 

@@ -101,9 +101,14 @@ def _extract_arguments(
 
 
 class _IntervalMeta(type):
-    def __call__(cls: "_IntervalMeta", *args: object, **kwargs: object) -> Any:
+    def __call__(cls, *args, **kwargs):  # type:ignore[no-untyped-def]
         if cls is Interval:
-            start, stop, include_lower_bound, include_upper_bound, args, kwargs = _extract_arguments(*args, **kwargs)
+            try:
+                start, stop, include_lower_bound, include_upper_bound, args, kwargs = _extract_arguments(
+                    *args, **kwargs
+                )
+            except TypeError as e:
+                raise TypeError(str(e).replace(_extract_arguments.__name__, cls.__name__)) from None
 
             if include_lower_bound:
                 cls = ClosedInterval if include_upper_bound else ClosedOpenInterval
@@ -111,6 +116,9 @@ class _IntervalMeta(type):
                 cls = OpenClosedInterval if include_upper_bound else OpenInterval
 
             return super(_IntervalMeta, cls).__call__(start, stop, *args, **kwargs)  # type:ignore[misc]
+
+        elif cls is ConcreteInterval:
+            raise TypeError("'ConcreteInterval' is abstract and cannot be instantiated")
 
         else:
             return super(_IntervalMeta, cls).__call__(*args, **kwargs)
@@ -194,13 +202,13 @@ class Interval[T: Sortable](IntervalSet[T], metaclass=_IntervalMeta):
                 (self.stop, self.includes_upper_bound()), (other.stop, other.includes_upper_bound())
             )
             return (
-                new_interval(start, stop, bool(include_lower_bound), bool(include_upper_bound)),  # type:ignore[return-value]
+                Interval(start, stop, bool(include_lower_bound), bool(include_upper_bound)),  # type:ignore[return-value]
             )
 
         if not self.stop < other.start and not other.start < self.start:  # type:ignore[operator]
             if self.includes_upper_bound() or other.includes_lower_bound():
                 return (
-                    new_interval(
+                    Interval(
                         self.start,
                         other.stop,
                         self.includes_lower_bound(),
@@ -212,7 +220,7 @@ class Interval[T: Sortable](IntervalSet[T], metaclass=_IntervalMeta):
 
         if other.includes_upper_bound() or self.includes_lower_bound():
             return (
-                new_interval(
+                Interval(
                     other.start,
                     self.stop,
                     other.includes_lower_bound(),
@@ -252,7 +260,7 @@ class Interval[T: Sortable](IntervalSet[T], metaclass=_IntervalMeta):
         stop, include_upper_bound = min(  # type:ignore[assignment]
             (self.stop, self.includes_upper_bound()), (other.stop, other.includes_upper_bound())
         )
-        return new_interval(start, stop, bool(include_lower_bound), include_upper_bound)
+        return Interval(start, stop, bool(include_lower_bound), include_upper_bound)
 
     def _binary_intersection[U: Sortable](self, other: IntervalSet[U]) -> IntervalSet[T | U]:
         match other:
@@ -343,19 +351,6 @@ class OpenClosedInterval[T: Sortable](ConcreteInterval[T]):
         return True
 
 
-def new_interval[T: Sortable](start: T, stop: T, include_lower_bound: bool, include_upper_bound: bool) -> Interval[T]:
-    if include_lower_bound:
-        if include_upper_bound:
-            return ClosedInterval(start, stop)
-        else:
-            return ClosedOpenInterval(start, stop)
-    else:
-        if include_upper_bound:
-            return OpenClosedInterval(start, stop)
-        else:
-            return OpenInterval(start, stop)
-
-
 Closed = ClosedInterval
 Open = OpenInterval
 ClosedOpen = ClosedOpenInterval
@@ -363,8 +358,3 @@ OpenClosed = OpenClosedInterval
 
 
 EMPTY_INTERVAL = OpenInterval[Any](INF, -INF)
-
-
-print(Open(1, 2))
-print(Interval(1, 2, False, False))
-print(Interval(1, 2, True, True))
