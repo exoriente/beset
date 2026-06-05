@@ -1,4 +1,3 @@
-from abc import abstractmethod, ABC
 from functools import reduce
 from itertools import chain
 from operator import attrgetter
@@ -8,17 +7,17 @@ from beset.infinity import INF, InfinityTypes
 from beset.sortable import Sortable
 
 
-class Multiinterval[T: Sortable]:
-    _intervals: tuple["Monointerval[T]", ...]
+class IntervalSet[T: Sortable]:
+    _intervals: tuple["Interval[T]", ...]
 
-    def __init__(self, intervals: Iterable["Monointerval[T]"]) -> None:
-        object.__setattr__(self, "_intervals", tuple(Monointerval._iterable_union(*intervals)))
+    def __init__(self, intervals: Iterable["Interval[T]"]) -> None:
+        object.__setattr__(self, "_intervals", tuple(Interval._iterable_union(*intervals)))
 
     def __setattr__(self, key: str, value: object) -> None:
         raise AttributeError(f"{self.__class__.__name__} is immutable. Cannot modify '{key}'.")
 
     @property
-    def intervals(self) -> tuple["Monointerval[T]", ...]:
+    def intervals(self) -> tuple["Interval[T]", ...]:
         return self._intervals
 
     def empty(self) -> bool:
@@ -26,7 +25,7 @@ class Multiinterval[T: Sortable]:
 
     def __eq__(self, other: object) -> bool:
         match other:
-            case Multiinterval():
+            case IntervalSet():
                 try:
                     return all(a == b for a, b in zip(self.intervals, other.intervals, strict=True))
                 except ValueError:
@@ -34,9 +33,7 @@ class Multiinterval[T: Sortable]:
             case _:
                 return NotImplemented
 
-    def _binary_intersection[U: Sortable](
-        self, other: "Multiinterval[U]"
-    ) -> "Multiinterval[T | U]":
+    def _binary_intersection[U: Sortable](self, other: "IntervalSet[U]") -> "IntervalSet[T | U]":
         it1 = iter(self.intervals)
         it2 = iter(other.intervals)
 
@@ -44,7 +41,7 @@ class Multiinterval[T: Sortable]:
             v1 = next(it1)
             v2 = next(it2)
         except StopIteration:
-            return Multiinterval(())
+            return IntervalSet(())
 
         intervals = []
 
@@ -56,29 +53,25 @@ class Multiinterval[T: Sortable]:
                 else:
                     v2 = next(it2)
             except StopIteration:
-                return Multiinterval(intervals)
+                return IntervalSet(intervals)
 
-    def union[U: Sortable](*others: "Multiinterval[U]") -> "Multiinterval[T | U]":
-        return Multiinterval(chain.from_iterable(map(attrgetter("intervals"), others)))
+    def union[U: Sortable](*others: "IntervalSet[U]") -> "IntervalSet[T | U]":
+        return IntervalSet(chain.from_iterable(map(attrgetter("intervals"), others)))
 
-    def intersection[U: Sortable](*others: "Multiinterval[U]") -> "Multiinterval[T | U]":
-        return reduce(Multiinterval._binary_intersection, others)
+    def intersection[U: Sortable](*others: "IntervalSet[U]") -> "IntervalSet[T | U]":
+        return reduce(IntervalSet._binary_intersection, others)
 
     def finite(self) -> bool:
-        return len(self.intervals) == 0 or (
-            self.intervals[0].start != -INF and self.intervals[-1].stop != INF
-        )
+        return len(self.intervals) == 0 or (self.intervals[0].start != -INF and self.intervals[-1].stop != INF)
 
     def infinite(self) -> bool:
-        return len(self.intervals) > 0 and (
-            self.intervals[0].start == -INF or self.intervals[-1].stop == INF
-        )
+        return len(self.intervals) > 0 and (self.intervals[0].start == -INF or self.intervals[-1].stop == INF)
 
-    def bounded[U: Sortable](self: "Multiinterval[U | InfinityTypes]") -> "Multiinterval[U]":
+    def bounded[U: Sortable](self: "IntervalSet[U | InfinityTypes]") -> "IntervalSet[U]":
         if self.infinite():
             raise TypeError("Bounded cannot be called on infinite interval")
 
-        return cast(Multiinterval[U], self)
+        return cast(IntervalSet[U], self)
 
     def __repr__(self) -> str:
         intervals_str = ", ".join(map(repr, self.intervals))
@@ -96,14 +89,40 @@ class Multiinterval[T: Sortable]:
         return " U ".join(map(str, self.intervals))
 
 
-class Monointerval[T: Sortable](Multiinterval[T], ABC):
+def _extract_arguments(
+    start: object,
+    stop: object,
+    include_lower_bound: object,
+    include_upper_bound: object,
+    *args: object,
+    **kwargs: object,
+) -> tuple[object, object, object, object, tuple[object, ...], dict[str, object]]:
+    return start, stop, include_lower_bound, include_upper_bound, args, kwargs
+
+
+class _IntervalMeta(type):
+    def __call__(cls: "_IntervalMeta", *args: object, **kwargs: object) -> Any:
+        if cls is Interval:
+            start, stop, include_lower_bound, include_upper_bound, args, kwargs = _extract_arguments(*args, **kwargs)
+
+            if include_lower_bound:
+                cls = ClosedInterval if include_upper_bound else ClosedOpenInterval
+            else:
+                cls = OpenClosedInterval if include_upper_bound else OpenInterval
+
+            return super(_IntervalMeta, cls).__call__(start, stop, *args, **kwargs)  # type:ignore[misc]
+
+        else:
+            return super(_IntervalMeta, cls).__call__(*args, **kwargs)
+
+
+class Interval[T: Sortable](IntervalSet[T], metaclass=_IntervalMeta):
     _start: T
     _stop: T
 
-    def __init__(self, start: T, stop: T) -> None:
-        object.__setattr__(self, "_intervals", (self,))
-        object.__setattr__(self, "_start", start)
-        object.__setattr__(self, "_stop", stop)
+    def __init__(self, start: T, stop: T, include_lower_bound: bool, include_upper_bound: bool) -> None:
+        # never actually called
+        raise NotImplementedError
 
     @property
     def start(self) -> T:
@@ -113,26 +132,25 @@ class Monointerval[T: Sortable](Multiinterval[T], ABC):
     def stop(self) -> T:
         return self._stop
 
-    @abstractmethod
-    def includes_lower_bound(self) -> bool: ...
+    def includes_lower_bound(self) -> bool:
+        raise NotImplementedError
 
-    @abstractmethod
-    def includes_upper_bound(self) -> bool: ...
+    def includes_upper_bound(self) -> bool:
+        raise NotImplementedError
 
     def empty(self) -> bool:
         return self.stop < self.start or (
-            not self.start < self.stop
-            and (not self.includes_lower_bound() or not self.includes_upper_bound())
+            not self.start < self.stop and (not self.includes_lower_bound() or not self.includes_upper_bound())
         )
 
     def __eq__(self, other: object) -> bool:
         match other:
-            case Multiinterval() as multi:
+            case IntervalSet() as multi:
                 if self.empty():
                     return multi.empty()
 
                 match other:
-                    case Monointerval() as mono:
+                    case Interval() as mono:
                         try:
                             return (
                                 self.includes_lower_bound() == mono.includes_lower_bound()
@@ -144,16 +162,16 @@ class Monointerval[T: Sortable](Multiinterval[T], ABC):
                             )
                         except TypeError:
                             return False
-                    case Multiinterval():
+                    case IntervalSet():
                         return super().__eq__(other)
             case _:
                 return NotImplemented
 
     def _binary_union[U: Sortable](
-        self, other: "Monointerval[U]"
-    ) -> tuple["Monointerval[T | U]"] | tuple["Monointerval[T | U]", "Monointerval[T | U]"]:
+        self, other: "Interval[U]"
+    ) -> tuple["Interval[T | U]"] | tuple["Interval[T | U]", "Interval[T | U]"]:
         """
-        Returns a tuple with one or two monointervals in ascending order
+        Returns a tuple with one or two Intervals in ascending order
         """
         if self.empty():
             return (other,)
@@ -176,13 +194,13 @@ class Monointerval[T: Sortable](Multiinterval[T], ABC):
                 (self.stop, self.includes_upper_bound()), (other.stop, other.includes_upper_bound())
             )
             return (
-                new_monointerval(start, stop, bool(include_lower_bound), bool(include_upper_bound)),  # type:ignore[return-value]
+                new_interval(start, stop, bool(include_lower_bound), bool(include_upper_bound)),  # type:ignore[return-value]
             )
 
         if not self.stop < other.start and not other.start < self.start:  # type:ignore[operator]
             if self.includes_upper_bound() or other.includes_lower_bound():
                 return (
-                    new_monointerval(
+                    new_interval(
                         self.start,
                         other.stop,
                         self.includes_lower_bound(),
@@ -194,7 +212,7 @@ class Monointerval[T: Sortable](Multiinterval[T], ABC):
 
         if other.includes_upper_bound() or self.includes_lower_bound():
             return (
-                new_monointerval(
+                new_interval(
                     other.start,
                     self.stop,
                     other.includes_lower_bound(),
@@ -204,7 +222,7 @@ class Monointerval[T: Sortable](Multiinterval[T], ABC):
         else:
             return other, self
 
-    def _iterable_union[U: Sortable](*intervals: "Monointerval[U]") -> Iterable["Monointerval[U]"]:
+    def _iterable_union[U: Sortable](*intervals: "Interval[U]") -> Iterable["Interval[U]"]:
         ordered = iter(sorted(intervals, key=lambda x: (x.start, -x.includes_lower_bound())))
 
         try:
@@ -225,9 +243,7 @@ class Monointerval[T: Sortable](Multiinterval[T], ABC):
         if not last.empty():
             yield last
 
-    def _binary_intersection_mono[U: Sortable](
-        self, other: "Monointerval[U]"
-    ) -> "Monointerval[T | U]":
+    def _binary_intersection_mono[U: Sortable](self, other: "Interval[U]") -> "Interval[T | U]":
         start: T | U
         stop: T | U
         start, include_lower_bound = max(  # type:ignore[assignment]
@@ -236,31 +252,31 @@ class Monointerval[T: Sortable](Multiinterval[T], ABC):
         stop, include_upper_bound = min(  # type:ignore[assignment]
             (self.stop, self.includes_upper_bound()), (other.stop, other.includes_upper_bound())
         )
-        return new_monointerval(start, stop, bool(include_lower_bound), include_upper_bound)
+        return new_interval(start, stop, bool(include_lower_bound), include_upper_bound)
 
-    def _binary_intersection[U: Sortable](self, other: Multiinterval[U]) -> Multiinterval[T | U]:
+    def _binary_intersection[U: Sortable](self, other: IntervalSet[U]) -> IntervalSet[T | U]:
         match other:
-            case Monointerval():
-                return self._binary_intersection_mono(cast(Monointerval[U], other))
-            case Multiinterval():
+            case Interval():
+                return self._binary_intersection_mono(cast(Interval[U], other))
+            case IntervalSet():
                 return super()._binary_intersection(other)
 
     @overload
-    def intersection[U: Sortable](*others: "Monointerval[U]") -> "Monointerval[U]": ...
+    def intersection[U: Sortable](*others: "Interval[U]") -> "Interval[U]": ...
 
     @overload
-    def intersection[U: Sortable](*others: Multiinterval[U]) -> Multiinterval[U]: ...
+    def intersection[U: Sortable](*others: IntervalSet[U]) -> IntervalSet[U]: ...
 
-    def intersection[U: Sortable](*others: Multiinterval[U]) -> Multiinterval[U]:
+    def intersection[U: Sortable](*others: IntervalSet[U]) -> IntervalSet[U]:
         return reduce(lambda x, y: x._binary_intersection(y), others)
 
     @overload
-    def __and__[U: Sortable](self, other: "Monointerval[U]") -> "Monointerval[U]": ...
+    def __and__[U: Sortable](self, other: "Interval[U]") -> "Interval[U]": ...
 
     @overload
-    def __and__[U: Sortable](self, other: Multiinterval[U]) -> Multiinterval[U]: ...
+    def __and__[U: Sortable](self, other: IntervalSet[U]) -> IntervalSet[U]: ...
 
-    def __and__[U: Sortable](self, other: Multiinterval[U]) -> Multiinterval[T | U]:
+    def __and__[U: Sortable](self, other: IntervalSet[U]) -> IntervalSet[T | U]:
         return self._binary_intersection(other)
 
     def finite(self) -> bool:
@@ -269,11 +285,11 @@ class Monointerval[T: Sortable](Multiinterval[T], ABC):
     def infinite(self) -> bool:
         return self.start == -INF or self.stop == INF
 
-    def bounded[U: Sortable](self: "Monointerval[U | InfinityTypes]") -> "Monointerval[U]":
+    def bounded[U: Sortable](self: "Interval[U | InfinityTypes]") -> "Interval[U]":
         if self.infinite():
             raise TypeError("Bounded cannot be called on infinite interval")
 
-        return cast(Monointerval[U], self)
+        return cast(Interval[U], self)
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.start!r}, {self.stop!r})"
@@ -288,7 +304,14 @@ class Monointerval[T: Sortable](Multiinterval[T], ABC):
             return f"{open_bracket}{self.start!s} : {self.stop!s}{close_bracket}"
 
 
-class ClosedInterval[T: Sortable](Monointerval[T]):
+class ConcreteInterval[T: Sortable](Interval[T]):
+    def __init__(self, start: T, stop: T) -> None:
+        object.__setattr__(self, "_intervals", (self,))
+        object.__setattr__(self, "_start", start)
+        object.__setattr__(self, "_stop", stop)
+
+
+class ClosedInterval[T: Sortable](ConcreteInterval[T]):
     def includes_lower_bound(self) -> bool:
         return True
 
@@ -296,7 +319,7 @@ class ClosedInterval[T: Sortable](Monointerval[T]):
         return True
 
 
-class OpenInterval[T: Sortable](Monointerval[T]):
+class OpenInterval[T: Sortable](ConcreteInterval[T]):
     def includes_lower_bound(self) -> bool:
         return False
 
@@ -304,7 +327,7 @@ class OpenInterval[T: Sortable](Monointerval[T]):
         return False
 
 
-class ClosedOpenInterval[T: Sortable](Monointerval[T]):
+class ClosedOpenInterval[T: Sortable](ConcreteInterval[T]):
     def includes_lower_bound(self) -> bool:
         return True
 
@@ -312,7 +335,7 @@ class ClosedOpenInterval[T: Sortable](Monointerval[T]):
         return False
 
 
-class OpenClosedInterval[T: Sortable](Monointerval[T]):
+class OpenClosedInterval[T: Sortable](ConcreteInterval[T]):
     def includes_lower_bound(self) -> bool:
         return False
 
@@ -320,9 +343,7 @@ class OpenClosedInterval[T: Sortable](Monointerval[T]):
         return True
 
 
-def new_monointerval[T: Sortable](
-    start: T, stop: T, include_lower_bound: bool, include_upper_bound: bool
-) -> Monointerval[T]:
+def new_interval[T: Sortable](start: T, stop: T, include_lower_bound: bool, include_upper_bound: bool) -> Interval[T]:
     if include_lower_bound:
         if include_upper_bound:
             return ClosedInterval(start, stop)
@@ -339,11 +360,11 @@ Closed = ClosedInterval
 Open = OpenInterval
 ClosedOpen = ClosedOpenInterval
 OpenClosed = OpenClosedInterval
-Interval = ClosedOpenInterval
 
 
 EMPTY_INTERVAL = OpenInterval[Any](INF, -INF)
 
-open_multiinterval_1: Multiinterval[int] = OpenInterval[int](0, 1)
-open_multiinterval_2: Multiinterval[int] = OpenInterval[bool](False, True)
-open_monointerval: OpenInterval[int] = OpenInterval[bool](False, True)
+
+print(Open(1, 2))
+print(Interval(1, 2, False, False))
+print(Interval(1, 2, True, True))

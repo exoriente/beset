@@ -1,20 +1,20 @@
 from beset.infinity import INF
 from beset.intersection import intersection
-from beset.interval import Multiinterval, Open, Monointerval
+from beset.interval import IntervalSet, Open, Interval
 
 
-def test_multiinterval_intersect_type_peeling() -> None:
+def test_IntervalSet_intersect_type_peeling() -> None:
     """
-    type checkers should be satisfied result is Monointerval[int] and not Monointerval[int | Infinity()]
+    type checkers should be satisfied result is Interval[int] and not Interval[int | Infinity()]
     """
-    result: Multiinterval[int] = intersection(Open(1, 2), Open(0, INF))
+    result: IntervalSet[int] = intersection(Open(1, 2), Open(0, INF))
     assert result == Open(1, 2)
 
 
-def test_monointerval_intersect_type_peeling() -> None:
+def test_Interval_intersect_type_peeling() -> None:
     """
-    type checkers should be satisfied result is Monointerval[int] and not Monointerval[int | Infinity()]
+    type checkers should be satisfied result is Interval[int] and not Interval[int | Infinity()]
     """
-    result: Monointerval[int] = intersection(Open(1, 2), Open(0, INF))
+    result: Interval[int] = intersection(Open(1, 2), Open(0, INF))
     assert result == Open(1, 2)
-    assert isinstance(result, Monointerval)
+    assert isinstance(result, Interval)

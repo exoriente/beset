@@ -1,89 +1,85 @@
 from typing import overload
 
 from beset.infinity import InfinityTypes
-from beset.interval import Multiinterval, Monointerval
+from beset.interval import IntervalSet, Interval
 from beset.sortable import Sortable
 
 
 # @overload
 # def intersection[T: Sortable](
-#     a: Monointerval[T | InfinityTypes], b: Monointerval[T]
-# ) -> Monointerval[T]: ...
+#     a: Interval[T | InfinityTypes], b: Interval[T]
+# ) -> Interval[T]: ...
 #
 #
 # @overload
 # def intersection[T: Sortable](
-#     a: Monointerval[T | InfinityTypes], b: Multiinterval[T]
-# ) -> Monointerval[T]: ...
+#     a: Interval[T | InfinityTypes], b: IntervalSet[T]
+# ) -> Interval[T]: ...
 #
 #
 # @overload
 # def intersection[T: Sortable](  # type:ignore[overload-cannot-match]
-#     a: Monointerval[T], b: Multiinterval[T | InfinityTypes]
-# ) -> Monointerval[T]: ...
+#     a: Interval[T], b: IntervalSet[T | InfinityTypes]
+# ) -> Interval[T]: ...
 #
 #
 # @overload
 # def intersection[T: Sortable](
-#     a: Multiinterval[T | InfinityTypes], b: Monointerval[T]
-# ) -> Monointerval[T]: ...
+#     a: IntervalSet[T | InfinityTypes], b: Interval[T]
+# ) -> Interval[T]: ...
 #
 #
 # @overload
 # def intersection[T: Sortable](  # type:ignore[overload-cannot-match]
-#     a: Multiinterval[T], b: Monointerval[T | InfinityTypes]
-# ) -> Monointerval[T]: ...
+#     a: IntervalSet[T], b: Interval[T | InfinityTypes]
+# ) -> Interval[T]: ...
 #
 #
 # @overload
 # def intersection[T: Sortable](
-#     a: Multiinterval[T | InfinityTypes], b: Multiinterval[T]
-# ) -> Multiinterval[T]: ...
+#     a: IntervalSet[T | InfinityTypes], b: IntervalSet[T]
+# ) -> IntervalSet[T]: ...
 #
 #
 # @overload
 # def intersection[T: Sortable](  # type:ignore[overload-cannot-match]
-#     a: Multiinterval[T], b: Multiinterval[T | InfinityTypes]
-# ) -> Multiinterval[T]: ...
+#     a: IntervalSet[T], b: IntervalSet[T | InfinityTypes]
+# ) -> IntervalSet[T]: ...
+
+
+@overload
+def intersection[A: Sortable, B: Sortable](a: Interval[A], b: Interval[B | InfinityTypes]) -> Interval[A | B]: ...
+
+
+@overload
+def intersection[A: Sortable, B: Sortable](  # type:ignore[overload-cannot-match]
+    a: Interval[A | InfinityTypes], b: Interval[B]
+) -> Interval[A | B]: ...
+
+
+@overload
+def intersection[A: Sortable, B: Sortable](  # type:ignore[overload-cannot-match]
+    a: Interval[A], b: Interval[B]
+) -> Interval[A | B]: ...
 
 
 @overload
 def intersection[A: Sortable, B: Sortable](
-    a: Monointerval[A], b: Monointerval[B | InfinityTypes]
-) -> Monointerval[A | B]: ...
+    a: IntervalSet[A | InfinityTypes], b: IntervalSet[B]
+) -> IntervalSet[A | B]: ...
 
 
 @overload
 def intersection[A: Sortable, B: Sortable](  # type:ignore[overload-cannot-match]
-    a: Monointerval[A | InfinityTypes], b: Monointerval[B]
-) -> Monointerval[A | B]: ...
+    a: IntervalSet[A], b: IntervalSet[B | InfinityTypes]
+) -> IntervalSet[A | B]: ...
 
 
 @overload
 def intersection[A: Sortable, B: Sortable](  # type:ignore[overload-cannot-match]
-    a: Monointerval[A], b: Monointerval[B]
-) -> Monointerval[A | B]: ...
+    a: IntervalSet[A], b: IntervalSet[B]
+) -> IntervalSet[A | B]: ...
 
 
-@overload
-def intersection[A: Sortable, B: Sortable](
-    a: Multiinterval[A | InfinityTypes], b: Multiinterval[B]
-) -> Multiinterval[A | B]: ...
-
-
-@overload
-def intersection[A: Sortable, B: Sortable](  # type:ignore[overload-cannot-match]
-    a: Multiinterval[A], b: Multiinterval[B | InfinityTypes]
-) -> Multiinterval[A | B]: ...
-
-
-@overload
-def intersection[A: Sortable, B: Sortable](  # type:ignore[overload-cannot-match]
-    a: Multiinterval[A], b: Multiinterval[B]
-) -> Multiinterval[A | B]: ...
-
-
-def intersection[A: Sortable, B: Sortable](
-    a: Multiinterval[A], b: Multiinterval[B]
-) -> Multiinterval[A | B]:
+def intersection[A: Sortable, B: Sortable](a: IntervalSet[A], b: IntervalSet[B]) -> IntervalSet[A | B]:
     return a.intersection(b)
