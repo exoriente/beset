@@ -1,11 +1,12 @@
 [project]
 name = "beset"
 version = "0.1.0"
-description = "Immutable intervals as sets"
+description = "Immutable, typed intervals as sets"
 authors = [
     {name = "exoriente",email = "oosten@gmail.com"}
 ]
 license = "MIT"
+readme = "readme.md"
 requires-python = ">=3.12"
 dependencies = [
 ]
