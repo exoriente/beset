@@ -1,18 +1,20 @@
 from itertools import permutations
 from typing import Any
 
-from beset.infinity import INF, InfinityTypes
-from beset.interval import (
-    Closed,
-    Open,
-    ClosedOpen,
-    OpenClosed,
-    EMPTY_INTERVAL,
-    IntervalSet,
-    Interval,
-    ConcreteInterval,
-)
 from pytest import mark, raises
+
+from beset import (
+    EMPTY_INTERVAL,
+    INF,
+    Closed,
+    ClosedOpen,
+    ConcreteInterval,
+    InfinityTypes,
+    Interval,
+    IntervalSet,
+    Open,
+    OpenClosed,
+)
 
 
 @mark.parametrize("interval_type", [Open, Closed, ClosedOpen, OpenClosed])
@@ -128,6 +130,17 @@ def test_interval_eq_not_empty(a: int | str, b: int | str) -> None:
 
 def test_interval_eq_different_type() -> None:
     assert Open(1, 2) != Open("1", "2")
+
+
+@mark.parametrize("interval_type", [Open, Closed, ClosedOpen, OpenClosed])
+def test_contains(interval_type: type[ConcreteInterval[int]]) -> None:
+    interval = interval_type(1, 3)
+    assert 0 not in interval
+    assert (1 in interval) == interval.includes_lower_bound()
+    assert 2 in interval
+    assert (3 in interval) == interval.includes_upper_bound()
+    assert 4 not in interval
+    assert "a" not in interval
 
 
 def test_intervals_iterable_union_as_method() -> None:
@@ -275,15 +288,43 @@ def test_interval_binary_intersection(
     )
 
 
-# @mark.parametrize("interval_type_c", [Open, Closed, ClosedOpen, OpenClosed])
-# @mark.parametrize("interval_type_b", [Open, Closed, ClosedOpen, OpenClosed])
-# @mark.parametrize("interval_type_a", [Open, Closed, ClosedOpen, OpenClosed])
-# def test_interval_intersection(
-#     interval_type_a: type[_ConcreteIntervalBase[int]],
-#     interval_type_b: type[_ConcreteIntervalBase[int]],
-#     interval_type_c: type[_ConcreteIntervalBase[int]],
-# ) -> None:
-#     assert False  # todo: implement
+@mark.parametrize("type_c", [Open, Closed, ClosedOpen, OpenClosed])
+@mark.parametrize("type_b", [Open, Closed, ClosedOpen, OpenClosed])
+@mark.parametrize("type_a", [Open, Closed, ClosedOpen, OpenClosed])
+def test_interval_intersection(
+    type_a: type[ConcreteInterval[int]],
+    type_b: type[ConcreteInterval[int]],
+    type_c: type[ConcreteInterval[int]],
+) -> None:
+    a = type_a(0, 3)
+    b = type_b(1, 4)
+    c = type_c(2, 6)
+    assert a & b & c == Interval(2, 3, c.includes_lower_bound(), a.includes_upper_bound())
+
+    a = type_a(0, 4)
+    b = type_b(1, 4)
+    c = type_c(2, 3)
+    assert a & b & c == c
+
+    a = type_a(0, 3)
+    b = type_b(1, 3)
+    c = type_c(2, 3)
+    assert a & b & c == Interval(
+        2,
+        3,
+        c.includes_lower_bound(),
+        a.includes_upper_bound() and b.includes_upper_bound() and c.includes_upper_bound(),
+    )
+
+    a = type_a(0, 1)
+    b = type_b(2, 3)
+    c = type_c(4, 5)
+    assert a & b & c == EMPTY_INTERVAL
+
+    a = type_a(0, 3)
+    b = type_b(2, 2)
+    c = type_c(1, 4)
+    assert a & b & c == b
 
 
 def test_interval_intersection_interval_type() -> None:
@@ -314,13 +355,28 @@ def test_interval_bounded_error() -> None:
         Open(0, INF).bounded()
 
 
+@mark.parametrize(
+    ["interval_type_a", "interval_type_b"],
+    [(Open, Open), (Closed, Closed), (ClosedOpen, ClosedOpen), (OpenClosed, OpenClosed)],
+)
+def test_interval_intersection_type_narrowing(
+    interval_type_a: type[ConcreteInterval[int]], interval_type_b: type[ConcreteInterval[int | InfinityTypes]]
+) -> None:
+    """
+    type checkers should be satisfied that a will be an interval of type int without InfinityTypes
+    (the reverse is not supported though; intervals without InfinityTypes must always come first)
+    """
+    a: Interval[int] = interval_type_a(0, 2) & interval_type_b(1, INF)
+    assert a == interval_type_a(1, 2)
+
+
 def test_interval_complement() -> None:
     assert ~EMPTY_INTERVAL == Closed(-INF, INF)
     assert ~Open(-INF, 0) == Closed(0, INF)
-    assert ~ClosedOpen(-INF, 0) == ClosedOpen(0, INF)
-    assert ~OpenClosed(-INF, 0) == OpenClosed(0, INF)
     assert ~Closed(-INF, 0) == Open(0, INF)
     assert ~Open(0, INF) == Closed(-INF, 0)
+    assert ~Closed(0, INF) == Open(-INF, 0)
+    assert ~ClosedOpen(-INF, 0) == ClosedOpen(0, INF)
+    assert ~OpenClosed(-INF, 0) == OpenClosed(0, INF)
     assert ~ClosedOpen(0, INF) == ClosedOpen(-INF, 0)
     assert ~OpenClosed(0, INF) == OpenClosed(-INF, 0)
-    assert ~Closed(0, INF) == Open(-INF, 0)

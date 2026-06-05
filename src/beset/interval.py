@@ -1,10 +1,18 @@
 from functools import reduce
 from itertools import chain, pairwise
 from operator import attrgetter
-from typing import Iterable, Any, cast, overload
+from typing import Any, Iterable, cast, overload
 
-from beset.infinity import INF, InfinityTypes, NegativeInfinity, Infinity
+from beset.infinity import INF, Infinity, InfinityTypes, NegativeInfinity
 from beset.sortable import Sortable
+
+
+def _eq(a: object, b: object) -> bool:
+    return not a < b and not b < a  # type:ignore[ty:unsupported-operator,unused-ignore,operator]
+
+
+def _le(a: object, b: object) -> bool:
+    return a < b or _eq(a, b)  # type:ignore[ty:unsupported-operator,unused-ignore,operator]
 
 
 class IntervalSet[T: Sortable]:
@@ -139,7 +147,7 @@ class IntervalSet[T: Sortable]:
     def __str__(self) -> str:
         if self.empty():
             return "<:>"
-        return " U ".join(map(str, self.intervals))
+        return " | ".join(map(str, self.intervals))
 
 
 def _extract_arguments(
@@ -217,12 +225,12 @@ class Interval[T: Sortable](IntervalSet[T], metaclass=_IntervalMeta):
                     case Interval() as interval:
                         try:
                             return (
-                                self.includes_lower_bound() == interval.includes_lower_bound()
-                                and self.includes_upper_bound() == interval.includes_upper_bound()
-                                and not self.start < interval.start
-                                and not interval.start < self.start
-                                and not self.stop < interval.stop
-                                and not interval.stop < self.stop
+                                _eq(self.start, interval.start)
+                                and _eq(self.stop, interval.stop)
+                                and (
+                                    self.includes_lower_bound() == interval.includes_lower_bound() or self.start == -INF
+                                )
+                                and (self.includes_upper_bound() == interval.includes_upper_bound() or self.stop == INF)
                             )
                         except TypeError:
                             return False
@@ -230,6 +238,10 @@ class Interval[T: Sortable](IntervalSet[T], metaclass=_IntervalMeta):
                         return super().__eq__(other)
             case _:
                 return NotImplemented
+
+    def __contains__(self, item: object) -> bool:
+        # abstract
+        raise NotImplementedError
 
     def _binary_union[U: Sortable](
         self, other: "Interval[U]"
@@ -377,7 +389,7 @@ class Interval[T: Sortable](IntervalSet[T], metaclass=_IntervalMeta):
         if self.empty():
             return f"{open_bracket}:{close_bracket}"
         else:
-            return f"{open_bracket}{self.start!s} : {self.stop!s}{close_bracket}"
+            return f"{open_bracket}{self.start!r} : {self.stop!r}{close_bracket}"
 
 
 class ConcreteInterval[T: Sortable](Interval[T]):
@@ -394,6 +406,12 @@ class ClosedInterval[T: Sortable](ConcreteInterval[T]):
     def includes_upper_bound(self) -> bool:
         return True
 
+    def __contains__(self, item: object) -> bool:
+        try:
+            return _le(self.start, item) and _le(item, self.stop)
+        except TypeError:
+            return False
+
 
 class OpenInterval[T: Sortable](ConcreteInterval[T]):
     def includes_lower_bound(self) -> bool:
@@ -401,6 +419,12 @@ class OpenInterval[T: Sortable](ConcreteInterval[T]):
 
     def includes_upper_bound(self) -> bool:
         return False
+
+    def __contains__(self, item: object) -> bool:
+        try:
+            return self.start < item < self.stop  # type:ignore[ty:unsupported-operator,unused-ignore,operator,no-any-return]
+        except TypeError:
+            return False
 
 
 class ClosedOpenInterval[T: Sortable](ConcreteInterval[T]):
@@ -410,6 +434,12 @@ class ClosedOpenInterval[T: Sortable](ConcreteInterval[T]):
     def includes_upper_bound(self) -> bool:
         return False
 
+    def __contains__(self, item: object) -> bool:
+        try:
+            return _le(self.start, item) and item < self.stop  # type:ignore[ty:unsupported-operator,unused-ignore,operator]
+        except TypeError:
+            return False
+
 
 class OpenClosedInterval[T: Sortable](ConcreteInterval[T]):
     def includes_lower_bound(self) -> bool:
@@ -417,6 +447,12 @@ class OpenClosedInterval[T: Sortable](ConcreteInterval[T]):
 
     def includes_upper_bound(self) -> bool:
         return True
+
+    def __contains__(self, item: object) -> bool:
+        try:
+            return self.start < item and _le(item, self.stop)  # type:ignore[ty:unsupported-operator,unused-ignore,operator]
+        except TypeError:
+            return False
 
 
 Closed = ClosedInterval

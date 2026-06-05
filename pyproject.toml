@@ -1,7 +1,7 @@
 [project]
 name = "beset"
 version = "0.1.0"
-description = "Intervals as sets"
+description = "Immutable intervals as sets"
 authors = [
     {name = "exoriente",email = "oosten@gmail.com"}
 ]
@@ -27,6 +27,9 @@ dev = [
 
 [tool.ruff]
 line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
 
 [tool.mypy]
 strict = true

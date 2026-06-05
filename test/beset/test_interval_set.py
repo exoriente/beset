@@ -1,16 +1,18 @@
 from itertools import permutations
 
-from beset.infinity import InfinityTypes, INF
-from beset.interval import (
-    Closed,
-    Open,
-    ClosedOpen,
-    OpenClosed,
-    IntervalSet,
-    EMPTY_INTERVAL,
-    ConcreteInterval,
-)
 from pytest import mark, raises
+
+from beset import (
+    EMPTY_INTERVAL,
+    INF,
+    Closed,
+    ClosedOpen,
+    ConcreteInterval,
+    InfinityTypes,
+    IntervalSet,
+    Open,
+    OpenClosed,
+)
 
 
 def test_interval_set_immutable() -> None:

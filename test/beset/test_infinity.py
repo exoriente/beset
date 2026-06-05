@@ -1,4 +1,4 @@
-from beset.infinity import Infinity, NegativeInfinity, InfinityTypes
+from beset.infinity import Infinity, InfinityTypes, NegativeInfinity
 
 
 def test_infinity_is() -> None:
