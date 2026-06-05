@@ -449,11 +449,11 @@ def test_interval_intersection_type_narrowing(
     interval_type_a: type[ConcreteInterval[int]], interval_type_b: type[ConcreteInterval[int | InfinityTypes]]
 ) -> None:
     """
-    type checkers should be satisfied that a will be an interval of type int without InfinityTypes
+    type checkers should be satisfied that x will be an interval of type int without InfinityTypes
     (the reverse is not supported though; intervals without InfinityTypes must always come first)
     """
-    a: Interval[int] = interval_type_a(0, 2) & interval_type_b(1, INF)
-    assert a == interval_type_a(1, 2)
+    x: Interval[int] = interval_type_a(0, 2) & interval_type_b(1, INF)
+    assert x == interval_type_a(1, 2)
 
 
 def test_interval_complement() -> None:
@@ -466,3 +466,12 @@ def test_interval_complement() -> None:
     assert ~OpenClosed(-INF, 0) == OpenClosed(0, INF)
     assert ~ClosedOpen(0, INF) == ClosedOpen(-INF, 0)
     assert ~OpenClosed(0, INF) == OpenClosed(-INF, 0)
+
+
+def test_interval_difference() -> None:
+    assert EMPTY_INTERVAL - EMPTY_INTERVAL == EMPTY_INTERVAL
+    assert Closed(0, 10) - EMPTY_INTERVAL == Closed(0, 10)
+    assert Closed(0, 10) - Open(2, 3) == Closed(0, 2) | Closed(3, 10)
+    assert Closed(0, 10).difference(Open(2, 3), Closed(5, 6)) == Closed(0, 2) | ClosedOpen(3, 5) | OpenClosed(6, 10)
+    assert Closed(0, 10).difference(Open(-INF, 2), Open(8, INF)) == Closed(2, 8)
+    assert Closed(0, 10).difference(Closed(4, 4), Closed(6, 6)) == ClosedOpen(0, 4) | Open(4, 6) | OpenClosed(6, 10)
