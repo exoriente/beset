@@ -6,12 +6,10 @@ from beset import (
     EMPTY,
     INF,
     Closed,
-    ClosedOpen,
     ConcreteInterval,
     InfinityTypes,
     IntervalSet,
     Open,
-    OpenClosed,
 )
 
 
@@ -20,62 +18,58 @@ def test_interval_set_immutable() -> None:
         IntervalSet(()).intervals = ()  # type:ignore[ty:invalid-assignment,unused-ignore,misc]
 
 
-@mark.parametrize("interval_type", [Open, Closed, ClosedOpen, OpenClosed])
 def test_interval_set_eq(
-    interval_type: type[ConcreteInterval[int]],
+    interval_class: type[ConcreteInterval[int]],
 ) -> None:
     assert IntervalSet(()) == IntervalSet(())
-    assert not IntervalSet(()) == IntervalSet((interval_type(0, 1),))
-    assert IntervalSet((interval_type(0, 1),)) == IntervalSet((interval_type(0, 1),))
-    assert not IntervalSet((interval_type(0, 1),)) == IntervalSet((interval_type(0, 2),))
-    assert not IntervalSet((interval_type(0, 1),)) == IntervalSet((interval_type(0, 1), interval_type(1, 2)))
-    assert IntervalSet((interval_type(0, 1), interval_type(1, 2))) == IntervalSet(
-        (interval_type(0, 1), interval_type(1, 2))
+    assert not IntervalSet(()) == IntervalSet((interval_class(0, 1),))
+    assert IntervalSet((interval_class(0, 1),)) == IntervalSet((interval_class(0, 1),))
+    assert not IntervalSet((interval_class(0, 1),)) == IntervalSet((interval_class(0, 2),))
+    assert not IntervalSet((interval_class(0, 1),)) == IntervalSet((interval_class(0, 1), interval_class(1, 2)))
+    assert IntervalSet((interval_class(0, 1), interval_class(1, 2))) == IntervalSet(
+        (interval_class(0, 1), interval_class(1, 2))
     )
-    assert not IntervalSet((interval_type(0, 1), interval_type(1, 2))) == IntervalSet(
-        (interval_type(0, 1), interval_type(1, 3))
+    assert not IntervalSet((interval_class(0, 1), interval_class(1, 2))) == IntervalSet(
+        (interval_class(0, 1), interval_class(1, 3))
     )
 
 
-@mark.parametrize("interval_type", [Open, Closed, ClosedOpen, OpenClosed])
 def test_interval_set_eq_interval(
-    interval_type: type[ConcreteInterval[int]],
+    interval_class: type[ConcreteInterval[int]],
 ) -> None:
     assert IntervalSet(()) == EMPTY
     assert EMPTY == IntervalSet(())
-    assert IntervalSet((interval_type(0, 1),)) == interval_type(0, 1)
+    assert IntervalSet((interval_class(0, 1),)) == interval_class(0, 1)
 
 
 def test_interval_set_eq_different_type() -> None:
     assert not IntervalSet(()) == 1
 
 
-@mark.parametrize("interval_type", [Open, Closed, ClosedOpen, OpenClosed])
 def test_interval_set_hash(
-    interval_type: type[ConcreteInterval[int]],
+    interval_class: type[ConcreteInterval[int]],
 ) -> None:
     assert hash(IntervalSet(())) == hash(IntervalSet(()))
-    assert not hash(IntervalSet(())) == hash(IntervalSet((interval_type(0, 1),)))
-    assert hash(IntervalSet((interval_type(0, 1),))) == hash(IntervalSet((interval_type(0, 1),)))
-    assert not hash(IntervalSet((interval_type(0, 1),))) == hash(IntervalSet((interval_type(0, 2),)))
-    assert not hash(IntervalSet((interval_type(0, 1),))) == hash(
-        IntervalSet((interval_type(0, 1), interval_type(1, 2)))
+    assert not hash(IntervalSet(())) == hash(IntervalSet((interval_class(0, 1),)))
+    assert hash(IntervalSet((interval_class(0, 1),))) == hash(IntervalSet((interval_class(0, 1),)))
+    assert not hash(IntervalSet((interval_class(0, 1),))) == hash(IntervalSet((interval_class(0, 2),)))
+    assert not hash(IntervalSet((interval_class(0, 1),))) == hash(
+        IntervalSet((interval_class(0, 1), interval_class(1, 2)))
     )
-    assert hash(IntervalSet((interval_type(0, 1), interval_type(1, 2)))) == hash(
-        IntervalSet((interval_type(0, 1), interval_type(1, 2)))
+    assert hash(IntervalSet((interval_class(0, 1), interval_class(1, 2)))) == hash(
+        IntervalSet((interval_class(0, 1), interval_class(1, 2)))
     )
-    assert not hash(IntervalSet((interval_type(0, 1), interval_type(1, 2)))) == hash(
-        IntervalSet((interval_type(0, 1), interval_type(1, 3)))
+    assert not hash(IntervalSet((interval_class(0, 1), interval_class(1, 2)))) == hash(
+        IntervalSet((interval_class(0, 1), interval_class(1, 3)))
     )
 
 
-@mark.parametrize("interval_type", [Open, Closed, ClosedOpen, OpenClosed])
 def test_interval_set_hash_interval(
-    interval_type: type[ConcreteInterval[int]],
+    interval_class: type[ConcreteInterval[int]],
 ) -> None:
     assert hash(IntervalSet(())) == hash(EMPTY)
     assert hash(EMPTY) == hash(IntervalSet(()))
-    assert hash(IntervalSet((interval_type(0, 1),))) == hash(interval_type(0, 1))
+    assert hash(IntervalSet((interval_class(0, 1),))) == hash(interval_class(0, 1))
 
 
 def test_interval_set_simplification() -> None:
@@ -117,10 +111,9 @@ def test_contains_single() -> None:
     assert 2 in IntervalSet((Closed(0, 2),))
 
 
-@mark.parametrize("interval_type", [Open, Closed, ClosedOpen, OpenClosed])
-def test_contains_multiple(interval_type: type[ConcreteInterval[int]]) -> None:
-    x = interval_type(1, 3)
-    y = interval_type(5, 7)
+def test_contains_multiple(interval_class: type[ConcreteInterval[int]]) -> None:
+    x = interval_class(1, 3)
+    y = interval_class(5, 7)
     assert 0 not in (x | y)
     assert (1 in (x | y)) == x.includes_lower_bound()
     assert 2 in (x | y)

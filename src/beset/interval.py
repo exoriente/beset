@@ -19,7 +19,7 @@ def _le(a: object, b: object) -> bool:
 class IntervalSet[T: Sortable]:
     _intervals: tuple["Interval[T]", ...]
 
-    def __init__(self, intervals: Iterable["Interval[T]"]) -> None:
+    def __init__(self, intervals: Iterable["Interval[T]"] = ()) -> None:
         object.__setattr__(self, "_intervals", tuple(Interval._iterable_union(*intervals)))
 
     def __setattr__(self, key: str, value: object) -> None:
