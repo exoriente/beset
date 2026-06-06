@@ -17,7 +17,7 @@ _immutable, typed intervals with the interface of Python sets_
 ## Examples
 
 Intervals are sets that contain all possible values between their lower and upper bounds.
-The `Closed` interval also included the bounds themselves. 
+The `Closed` interval also includes the bounds themselves. 
 
 ```python
 >>> from beset import Closed
@@ -29,6 +29,9 @@ The `Closed` interval also included the bounds themselves.
 
 >>> 0 in x, 1 in x, 2 in x, 3 in x, 4 in x
 (False, True, True, True, False)
+
+>>> x.start, x.stop
+(1, 3)
 ```
 
 The half-open `ClosedOpen` interval includes its lower bound but not its upper one.  
@@ -86,12 +89,70 @@ The results are equal.
 True
 ```
 
-The `beset` library provides an infinity object `INF`, which is defined to be larger than every other object (except `float("inf")`). This allows for the introduction the _complement_ operation.
+The `beset` library provides an infinity object `INF`, which is defined to be larger than every other object, except `float("inf")`.
+This allows for the introduction of the _complement_ operation that return the complementary interval, containing everything not in the original interval.
 
 ```python
 >>> Closed(-3, 7).complement()
 IntervalSet((Open(-INF, -3), Open(7, INF)))
 
 >>> print(~ClosedOpen(0, 100))  # the ~-operator returns the complement
-[-∞, 0> | [100, ∞>
+[-INF, 0> | [100, INF>
 ```
+
+## Typing
+
+The `Interval` and `IntervalSet` class are generics.
+In most cases the type checker of your choice automatically infers the correct type.
+
+```python
+>>> reveal_type(ClosedOpen(2.718, 6.283))  # Revealed type is beset.ClosedOpen[float]
+```
+
+Taking the complement of an interval can introduce `INF` values.
+
+```python
+>>> print(x := ~Closed(0, 10))
+<-INF : 0> | <10 : INF>
+
+>>> reveal_type(x)  # Revealed type is beset.IntervalSet[int | Infinity | NegativeInfinity]
+```
+
+Getting rid of the `Infinity` types can be accomplished using intersection.
+
+```python
+>>> domain = Closed[-100, 100] 
+>>> y =  domain & x
+>>> print(y)
+[-100 : 0> | <10 : 100]
+
+>>> reveal_type(y)  # Revealed type is beset.IntervalSet[int]
+```
+
+### `mypy`
+
+Using `mypy` you need to be more careful using union types when instantiating intervals.
+
+```python
+>>> c = ClosedOpen(7, INF)  # type of c according to mypy: ClosedOpen[Sortable]
+>>> r = c & domain          # type of r according to mypy: ClosedOpen[Sortable]
+```
+
+In `ty` and other checkers this goes better.
+
+```python
+>>> c = ClosedOpen(7, INF)  # type of c according to mypy: ClosedOpen[int | Infinity]
+>>> r = c & domain          # type of r according to mypy: ClosedOpen[int]
+```
+
+When determining the type of the interval `mypy` uses the "closest" parent class common to the different types.
+In this `mypy` uses `Sortable`, the protocol class used as bound for `Interval`. Other checkers, like `ty`, use a union type instead, which is more convenient for type narrowing by using intersection.
+
+As a workaround you can force `mypy` to do the same by being more explicit.
+
+```python
+>>> c = ClosedOpen[int | Infinity](7, INF)  # type of c according to mypy: ClosedOpen[int | Infinity]
+>>> r = c & domain                          # type of r according to mypy: ClosedOpen[int]
+```
+
+For more information about type-narrowing see the documentation.
