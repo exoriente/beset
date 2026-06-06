@@ -13,7 +13,7 @@ def _eq(a: object, b: object) -> bool:
 
 
 def _le(a: object, b: object) -> bool:
-    return a < b or _eq(a, b)  # type:ignore[ty:unsupported-operator,unused-ignore,operator]
+    return a < b or not b < a  # type:ignore[ty:unsupported-operator,unused-ignore,operator]
 
 
 class IntervalSet[T: Sortable]:
@@ -35,7 +35,7 @@ class IntervalSet[T: Sortable]:
     def __bool__(self) -> bool:
         return not self.empty()
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: object, /) -> bool:
         match other:
             case IntervalSet():
                 try:
@@ -48,7 +48,7 @@ class IntervalSet[T: Sortable]:
     def __hash__(self) -> int:
         return hash((IntervalSet, *filter(None, map(Interval._hash_data, self.intervals))))
 
-    def __contains__(self, item: object) -> bool:
+    def __contains__(self, item: object, /) -> bool:
         try:
             index = bisect_right(self.intervals, item, key=lambda x: x.stop)  # type:ignore[ty:no-matching-overload,unused-ignore,call-overload]
         except TypeError:
@@ -87,13 +87,13 @@ class IntervalSet[T: Sortable]:
     def union[U: Sortable](self, *others: "IntervalSet[U]") -> "IntervalSet[T | U]":
         return IntervalSet(chain.from_iterable(map(attrgetter("intervals"), chain((self,), others))))
 
-    def __or__[U: Sortable](self, other: "IntervalSet[U]") -> "IntervalSet[T | U]":
+    def __or__[U: Sortable](self, other: "IntervalSet[U]", /) -> "IntervalSet[T | U]":
         return self.union(other)
 
     def intersection[U: Sortable](self, *others: "IntervalSet[U | InfinityTypes]") -> "IntervalSet[T | U]":
         return reduce(lambda x, y: x._binary_intersection(y), others, self)
 
-    def __and__[U: Sortable](self, other: "IntervalSet[U | InfinityTypes]") -> "IntervalSet[T | U]":
+    def __and__[U: Sortable](self, other: "IntervalSet[U | InfinityTypes]", /) -> "IntervalSet[T | U]":
         return self._binary_intersection(other)
 
     def _include_infinity(self) -> bool:
@@ -140,14 +140,14 @@ class IntervalSet[T: Sortable]:
     def difference[U: Sortable](self, *others: "IntervalSet[U | InfinityTypes]") -> "IntervalSet[T | U]":
         return reduce(lambda x, y: x._binary_difference(y), others, self)
 
-    def __sub__[U: Sortable](self, other: "IntervalSet[U | InfinityTypes]") -> "IntervalSet[T | U]":
+    def __sub__[U: Sortable](self, other: "IntervalSet[U | InfinityTypes]", /) -> "IntervalSet[T | U]":
         return self.difference(other)
 
     def isdisjoint[U: Sortable](self, other: "IntervalSet[U]", /) -> bool:
-        return self & other == EMPTY_INTERVAL
+        return (self & other).empty()
 
     def issubset[U: Sortable](self, other: "IntervalSet[U]", /) -> bool:
-        return self - other == EMPTY_INTERVAL
+        return (self - other).empty()
 
     def __le__[U: Sortable](self, other: "IntervalSet[U]", /) -> bool:
         return self.issubset(other)
@@ -156,7 +156,7 @@ class IntervalSet[T: Sortable]:
         return self.issubset(other) and self != other
 
     def issuperset[U: Sortable](self, other: "IntervalSet[U]", /) -> bool:
-        return other - self == EMPTY_INTERVAL
+        return (other - self).empty()
 
     def __ge__[U: Sortable](self, other: "IntervalSet[U]", /) -> bool:
         return self.issuperset(other)
@@ -220,9 +220,9 @@ class _IntervalMeta(type):
                 raise TypeError(str(e).replace(_extract_arguments.__name__, cls.__name__)) from None
 
             if include_lower_bound:
-                cls = ClosedInterval if include_upper_bound else ClosedOpenInterval
+                cls = Closed if include_upper_bound else ClosedOpen
             else:
-                cls = OpenClosedInterval if include_upper_bound else OpenInterval
+                cls = OpenClosed if include_upper_bound else Open
 
             return super(_IntervalMeta, cls).__call__(start, stop, *args, **kwargs)  # type:ignore[misc]
 
@@ -279,7 +279,7 @@ class Interval[T: Sortable](IntervalSet[T], metaclass=_IntervalMeta):
             or not self.start < INF
         )
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: object, /) -> bool:
         match other:
             case IntervalSet() as interval_set:
                 if self.empty():
@@ -317,7 +317,7 @@ class Interval[T: Sortable](IntervalSet[T], metaclass=_IntervalMeta):
                 None if self.stop == INF else self.includes_upper_bound(),
             )
 
-    def __contains__(self, item: object) -> bool:
+    def __contains__(self, item: object, /) -> bool:
         # abstract method
         raise NotImplementedError
 
@@ -429,12 +429,12 @@ class Interval[T: Sortable](IntervalSet[T], metaclass=_IntervalMeta):
         return reduce(lambda x, y: x._binary_intersection(y), others, self)
 
     @overload
-    def __and__[U: Sortable](self, other: "Interval[U | InfinityTypes]") -> "Interval[T | U]": ...  # pyrefly:ignore[bad-override]
+    def __and__[U: Sortable](self, other: "Interval[U | InfinityTypes]", /) -> "Interval[T | U]": ...  # pyrefly:ignore[bad-override]
 
     @overload
-    def __and__[U: Sortable](self, other: IntervalSet[U | InfinityTypes]) -> IntervalSet[T | U]: ...
+    def __and__[U: Sortable](self, other: IntervalSet[U | InfinityTypes], /) -> IntervalSet[T | U]: ...
 
-    def __and__[U: Sortable](self, other: IntervalSet[U | InfinityTypes]) -> IntervalSet[T | U]:
+    def __and__[U: Sortable](self, other: IntervalSet[U | InfinityTypes], /) -> IntervalSet[T | U]:
         return self._binary_intersection(other)
 
     def complement(self) -> "IntervalSet[T | InfinityTypes]":
@@ -477,7 +477,7 @@ class ConcreteInterval[T: Sortable](Interval[T]):
         object.__setattr__(self, "_stop", stop)
 
 
-class ClosedInterval[T: Sortable](ConcreteInterval[T]):
+class Closed[T: Sortable](ConcreteInterval[T]):
     @staticmethod
     def includes_lower_bound() -> bool:
         return True
@@ -493,7 +493,7 @@ class ClosedInterval[T: Sortable](ConcreteInterval[T]):
             return False
 
 
-class OpenInterval[T: Sortable](ConcreteInterval[T]):
+class Open[T: Sortable](ConcreteInterval[T]):
     @staticmethod
     def includes_lower_bound() -> bool:
         return False
@@ -509,7 +509,7 @@ class OpenInterval[T: Sortable](ConcreteInterval[T]):
             return False
 
 
-class ClosedOpenInterval[T: Sortable](ConcreteInterval[T]):
+class ClosedOpen[T: Sortable](ConcreteInterval[T]):
     @staticmethod
     def includes_lower_bound() -> bool:
         return True
@@ -525,7 +525,7 @@ class ClosedOpenInterval[T: Sortable](ConcreteInterval[T]):
             return False
 
 
-class OpenClosedInterval[T: Sortable](ConcreteInterval[T]):
+class OpenClosed[T: Sortable](ConcreteInterval[T]):
     @staticmethod
     def includes_lower_bound() -> bool:
         return False
@@ -541,10 +541,4 @@ class OpenClosedInterval[T: Sortable](ConcreteInterval[T]):
             return False
 
 
-Closed = ClosedInterval
-Open = OpenInterval
-ClosedOpen = ClosedOpenInterval
-OpenClosed = OpenClosedInterval
-
-
-EMPTY_INTERVAL = OpenInterval[Any](INF, -INF)
+EMPTY = Open[Any](INF, -INF)

@@ -1,6 +1,6 @@
 python_paths = src/ test/
 
-all: nice tests
+all: nice tests tox
 
 ruff-format:
 	ruff format
@@ -30,3 +30,9 @@ nice: format checks
 
 tests:
 	pytest
+
+tox:
+	tox
+
+missing-coverage:
+	pytest --cov --cov-report term-missing

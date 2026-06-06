@@ -36,8 +36,8 @@ def test_interval_str() -> None:
 
 def test_interval_set_repr() -> None:
     assert repr(IntervalSet(())) == "IntervalSet(())"
-    assert repr(IntervalSet((Open(0, 1),))) == "IntervalSet((OpenInterval(0, 1),))"
-    assert repr(IntervalSet((Open(0, 1), Closed(2, 3)))) == "IntervalSet((OpenInterval(0, 1), ClosedInterval(2, 3)))"
+    assert repr(IntervalSet((Open(0, 1),))) == "IntervalSet((Open(0, 1),))"
+    assert repr(IntervalSet((Open(0, 1), Closed(2, 3)))) == "IntervalSet((Open(0, 1), Closed(2, 3)))"
 
 
 def test_interval_set_str() -> None:

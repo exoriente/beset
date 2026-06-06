@@ -3,7 +3,7 @@ from itertools import permutations
 from pytest import mark, raises
 
 from beset import (
-    EMPTY_INTERVAL,
+    EMPTY,
     INF,
     Closed,
     ClosedOpen,
@@ -41,9 +41,13 @@ def test_interval_set_eq(
 def test_interval_set_eq_interval(
     interval_type: type[ConcreteInterval[int]],
 ) -> None:
-    assert IntervalSet(()) == EMPTY_INTERVAL
-    assert EMPTY_INTERVAL == IntervalSet(())
+    assert IntervalSet(()) == EMPTY
+    assert EMPTY == IntervalSet(())
     assert IntervalSet((interval_type(0, 1),)) == interval_type(0, 1)
+
+
+def test_interval_set_eq_different_type() -> None:
+    assert not IntervalSet(()) == 1
 
 
 @mark.parametrize("interval_type", [Open, Closed, ClosedOpen, OpenClosed])
@@ -69,15 +73,15 @@ def test_interval_set_hash(
 def test_interval_set_hash_interval(
     interval_type: type[ConcreteInterval[int]],
 ) -> None:
-    assert hash(IntervalSet(())) == hash(EMPTY_INTERVAL)
-    assert hash(EMPTY_INTERVAL) == hash(IntervalSet(()))
+    assert hash(IntervalSet(())) == hash(EMPTY)
+    assert hash(EMPTY) == hash(IntervalSet(()))
     assert hash(IntervalSet((interval_type(0, 1),))) == hash(interval_type(0, 1))
 
 
 def test_interval_set_simplification() -> None:
-    assert IntervalSet(()) == EMPTY_INTERVAL
-    assert IntervalSet((EMPTY_INTERVAL,)) == EMPTY_INTERVAL
-    assert IntervalSet((EMPTY_INTERVAL,) * 10) == EMPTY_INTERVAL
+    assert IntervalSet(()) == EMPTY
+    assert IntervalSet((EMPTY,)) == EMPTY
+    assert IntervalSet((EMPTY,) * 10) == EMPTY
 
     # disjoint
     for factor in range(1, 3):
@@ -128,6 +132,20 @@ def test_contains_multiple(interval_type: type[ConcreteInterval[int]]) -> None:
     assert 8 not in (x | y)
 
 
+def test_interval_set_intersection_empty() -> None:
+    assert IntervalSet(()) & IntervalSet(()) == EMPTY
+    assert IntervalSet(()) & IntervalSet((Open(0, 1),)) == EMPTY
+    assert IntervalSet((Open(0, 1),)) & IntervalSet(()) == EMPTY
+    assert IntervalSet((Open(0, 1),)) & EMPTY == EMPTY
+
+
+def test_interval_set_complement_empty() -> None:
+    result = ~IntervalSet(())
+    assert result == Open(-INF, INF)
+    assert not result.intervals[0].includes_lower_bound()
+    assert not result.intervals[0].includes_upper_bound()
+
+
 def test_bounded() -> None:
     """
     type checkers should be satisfied that results are intervals of type int without InfinityTypes
@@ -163,3 +181,14 @@ def test_interval_set_difference() -> None:
     assert (Closed(0, 10) | Closed(20, 30)).difference(Open(4, 6), Open(24, 26)) == Closed(0, 4) | Closed(
         6, 10
     ) | Closed(20, 24) | Closed(26, 30)
+
+
+@mark.skip
+def test_interval_set_isdisjoint_empty() -> None:
+    assert IntervalSet(()).isdisjoint(IntervalSet(()))
+    assert IntervalSet(()).isdisjoint(EMPTY)
+    assert EMPTY.isdisjoint(IntervalSet(()))
+    assert EMPTY.isdisjoint(Open(0, 1) | Open(2, 3))
+    assert (Open(0, 1) | Open(2, 3)).isdisjoint(EMPTY)
+    assert EMPTY.isdisjoint(Open(0, 1) | Open(2, 3))
+    assert (Open(0, 1) | Open(2, 3)).isdisjoint(EMPTY)

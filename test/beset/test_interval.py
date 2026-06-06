@@ -4,7 +4,7 @@ from typing import Any
 from pytest import mark, raises
 
 from beset import (
-    EMPTY_INTERVAL,
+    EMPTY,
     INF,
     Closed,
     ClosedOpen,
@@ -230,7 +230,7 @@ def test_contains(interval_type: type[ConcreteInterval[int]]) -> None:
 
 
 def test_contains_empty() -> None:
-    assert 0 not in EMPTY_INTERVAL
+    assert 0 not in EMPTY
 
 
 def test_contains_different_type() -> None:
@@ -244,8 +244,8 @@ def test_intervals_iterable_union_as_method() -> None:
 def test_intervals_iterable_union() -> None:
     # empty
     assert tuple(Interval._iterable_union()) == ()
-    assert tuple(Interval._iterable_union(EMPTY_INTERVAL)) == ()
-    assert tuple(Interval._iterable_union(*((EMPTY_INTERVAL,) * 10))) == ()
+    assert tuple(Interval._iterable_union(EMPTY)) == ()
+    assert tuple(Interval._iterable_union(*((EMPTY,) * 10))) == ()
 
     # disjoint
     for factor in range(1, 3):
@@ -284,7 +284,7 @@ def test_interval_union(
     a = interval_type_a(1, 0)
     b = interval_type_b(1, 0)
     c = interval_type_c(1, 0)
-    assert a.union(b, c) == EMPTY_INTERVAL
+    assert a.union(b, c) == EMPTY
 
     # overlapping
     a = interval_type_a(0, 2)
@@ -308,7 +308,7 @@ def test_interval_binary_intersection(
     # empty
     v = interval_type_a(0, -1)
     w = interval_type_b(0, -1)
-    assert v._binary_intersection(w) == EMPTY_INTERVAL
+    assert v._binary_intersection(w) == EMPTY
 
     # zero-length
     v = interval_type_a(0, 0)
@@ -323,12 +323,12 @@ def test_interval_binary_intersection(
     # disjoint
     v = interval_type_a(0, 1)
     w = interval_type_b(2, 3)
-    assert v._binary_intersection(w) == EMPTY_INTERVAL
+    assert v._binary_intersection(w) == EMPTY
 
     # disjoint reversed
     v = interval_type_a(2, 3)
     w = interval_type_b(0, 1)
-    assert v._binary_intersection(w) == EMPTY_INTERVAL
+    assert v._binary_intersection(w) == EMPTY
 
     # overlapping
     v = interval_type_a(0, 2)
@@ -344,14 +344,14 @@ def test_interval_binary_intersection(
     v = interval_type_a(0, 1)
     w = interval_type_b(1, 2)
     assert v._binary_intersection(w) == (
-        Closed(1, 1) if v.includes_upper_bound() and w.includes_lower_bound() else EMPTY_INTERVAL
+        Closed(1, 1) if v.includes_upper_bound() and w.includes_lower_bound() else EMPTY
     )
 
     # touching reversed
     v = interval_type_a(1, 2)
     w = interval_type_b(0, 1)
     assert v._binary_intersection(w) == (
-        Closed(1, 1) if v.includes_lower_bound() and w.includes_upper_bound() else EMPTY_INTERVAL
+        Closed(1, 1) if v.includes_lower_bound() and w.includes_upper_bound() else EMPTY
     )
 
     # touching lower bound internally
@@ -414,7 +414,7 @@ def test_interval_intersection(
     a = type_a(0, 1)
     b = type_b(2, 3)
     c = type_c(4, 5)
-    assert a & b & c == EMPTY_INTERVAL
+    assert a & b & c == EMPTY
 
     a = type_a(0, 3)
     b = type_b(2, 2)
@@ -466,7 +466,7 @@ def test_interval_intersection_type_narrowing(
 
 
 def test_interval_complement() -> None:
-    assert ~EMPTY_INTERVAL == Closed(-INF, INF)
+    assert ~EMPTY == Closed(-INF, INF)
     assert ~Open(-INF, 0) == Closed(0, INF)
     assert ~Closed(-INF, 0) == Open(0, INF)
     assert ~Open(0, INF) == Closed(-INF, 0)
@@ -478,10 +478,17 @@ def test_interval_complement() -> None:
 
 
 def test_interval_difference() -> None:
-    assert EMPTY_INTERVAL - EMPTY_INTERVAL == EMPTY_INTERVAL
-    assert Closed(0, 10) - EMPTY_INTERVAL == Closed(0, 10)
+    assert EMPTY - EMPTY == EMPTY
+    assert Closed(0, 10) - EMPTY == Closed(0, 10)
     assert Closed(0, 10) - Open(2, 3) == Closed(0, 2) | Closed(3, 10)
     assert Closed(0, 10) - Open(0, 10) == Closed(0, 0) | Closed(10, 10)
     assert Closed(0, 10).difference(Open(2, 3), Closed(5, 6)) == Closed(0, 2) | ClosedOpen(3, 5) | OpenClosed(6, 10)
     assert Closed(0, 10).difference(Open(-INF, 2), Open(8, INF)) == Closed(2, 8)
     assert Closed(0, 10).difference(Closed(4, 4), Closed(6, 6)) == ClosedOpen(0, 4) | Open(4, 6) | OpenClosed(6, 10)
+
+
+@mark.skip
+def test_interval_isdisjoint_empty() -> None:
+    assert EMPTY.isdisjoint(EMPTY)
+    assert EMPTY.isdisjoint(Open(0, 1))
+    assert Open(0, 1).isdisjoint(EMPTY)
