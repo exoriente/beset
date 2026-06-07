@@ -155,4 +155,5 @@ As a workaround you can force `mypy` to do the same by being more explicit.
 >>> r = c & domain                          # type of r according to mypy: ClosedOpen[int]
 ```
 
-For more information about type-narrowing see the documentation.
+For more information about type narrowing see the documentation.
+

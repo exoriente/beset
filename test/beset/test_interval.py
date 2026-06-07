@@ -476,5 +476,25 @@ def test_interval_difference(
 
 def test_interval_isdisjoint_empty(empty_a: IntervalSet[Any], empty_b: IntervalSet[Any]) -> None:
     assert empty_a.isdisjoint(empty_b)
-    assert empty_a.isdisjoint(Open(0, 1))
-    assert Open(0, 1).isdisjoint(empty_a)
+
+
+def test_interval_isdisjoint_empty_non_empty(empty: IntervalSet[Any]) -> None:
+    assert empty.isdisjoint(Open(0, 1))
+    assert Open(0, 1).isdisjoint(empty)
+
+
+def test_interval_le_empty(empty_a: IntervalSet[Any], empty_b: IntervalSet[Any]) -> None:
+    assert empty_a <= empty_b
+
+
+def test_interval_le_empty_full(empty: IntervalSet[Any], interval_class: type[ConcreteInterval[int]]) -> None:
+    assert empty <= interval_class(0, 1)
+
+
+def test_interval_le(relative_combination: tuple[Interval[int], Interval[int]]) -> None:
+    a, b = relative_combination
+
+    left_covered = b.start < a.start or b.includes_lower_bound() >= a.includes_lower_bound() and not a.start < b.start
+    right_covered = a.stop < b.stop or b.includes_upper_bound() >= a.includes_upper_bound() and not b.stop < a.stop
+
+    assert (a <= b) == (left_covered and right_covered)
