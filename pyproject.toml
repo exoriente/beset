@@ -3,7 +3,7 @@ name = "beset"
 version = "0.1.0"
 description = "Immutable, typed intervals as sets"
 authors = [
-    {name = "exoriente",email = "oosten@gmail.com"}
+    {name = "Maarten Oosten",email = "oosten@gmail.com"}
 ]
 license = "MIT"
 readme = "readme.md"

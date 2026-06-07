@@ -4,7 +4,7 @@ from pytest import FixtureRequest, fixture
 
 from beset import EMPTY, Closed, ClosedOpen, ConcreteInterval, IntervalSet, Open, OpenClosed
 
-_EMPTY_INTERVALS = [EMPTY, IntervalSet()]
+_EMPTY_INTERVALS = [EMPTY, Open(1, 0), IntervalSet()]
 
 
 @fixture(params=_EMPTY_INTERVALS)

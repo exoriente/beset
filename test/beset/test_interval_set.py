@@ -34,11 +34,9 @@ def test_interval_set_eq(
     )
 
 
-def test_interval_set_eq_interval(
-    interval_class: type[ConcreteInterval[int]],
-) -> None:
-    assert IntervalSet(()) == EMPTY
-    assert EMPTY == IntervalSet(())
+def test_interval_set_eq_interval(interval_class: type[ConcreteInterval[int]], empty: ConcreteInterval[int]) -> None:
+    assert IntervalSet(()) == empty
+    assert empty == IntervalSet(())
     assert IntervalSet((interval_class(0, 1),)) == interval_class(0, 1)
 
 
@@ -98,8 +96,8 @@ def test_interval_set_simplification() -> None:
             assert IntervalSet(intervals) == IntervalSet((Open(0, 2), Open(2, 4)))
 
 
-def test_contains_empty() -> None:
-    assert 1 not in IntervalSet(())
+def test_contains_empty(empty: ConcreteInterval[int]) -> None:
+    assert 1 not in empty
 
 
 def test_contains_single() -> None:
@@ -125,11 +123,11 @@ def test_contains_multiple(interval_class: type[ConcreteInterval[int]]) -> None:
     assert 8 not in (x | y)
 
 
-def test_interval_set_intersection_empty() -> None:
-    assert IntervalSet(()) & IntervalSet(()) == EMPTY
-    assert IntervalSet(()) & IntervalSet((Open(0, 1),)) == EMPTY
-    assert IntervalSet((Open(0, 1),)) & IntervalSet(()) == EMPTY
-    assert IntervalSet((Open(0, 1),)) & EMPTY == EMPTY
+def test_interval_set_intersection_empty(empty: ConcreteInterval[int]) -> None:
+    assert IntervalSet(()) & IntervalSet(()) == empty
+    assert IntervalSet(()) & IntervalSet((Open(0, 1),)) == empty
+    assert IntervalSet((Open(0, 1),)) & IntervalSet(()) == empty
+    assert IntervalSet((Open(0, 1),)) & empty == empty
 
 
 def test_interval_set_complement_empty() -> None:
@@ -177,7 +175,7 @@ def test_interval_set_difference() -> None:
 
 
 @mark.skip
-def test_interval_set_isdisjoint_empty() -> None:
+def test_interval_set_isdisjoint_empty(empty: ConcreteInterval[int]) -> None:
     assert IntervalSet(()).isdisjoint(IntervalSet(()))
     assert IntervalSet(()).isdisjoint(EMPTY)
     assert EMPTY.isdisjoint(IntervalSet(()))
