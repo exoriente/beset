@@ -473,6 +473,12 @@ def test_interval_difference(
     assert Closed(0, 10).difference(Open(-INF, 2), Open(8, INF)) == Closed(2, 8)
     assert Closed(0, 10).difference(Closed(4, 4), Closed(6, 6)) == ClosedOpen(0, 4) | Open(4, 6) | OpenClosed(6, 10)
 
+    # result: Interval[int] = Closed(0, 10) - EMPTY
+    # assert result == Closed(0, 10)
+
+    result_2: IntervalSet[int | float] = Closed(0, 10) & Closed(3.13, 18)
+    assert result_2 == Closed(3.13, 10)
+
 
 def test_interval_isdisjoint_empty(empty_a: IntervalSet[Any], empty_b: IntervalSet[Any]) -> None:
     assert empty_a.isdisjoint(empty_b)

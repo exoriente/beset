@@ -1,4 +1,6 @@
-python_paths = src/ test/
+source_path = src/
+tests_path = test/
+python_paths = $(source_path) $(tests_path)
 
 all: nice tests tox
 
@@ -24,7 +26,10 @@ pyrefly:
 
 type-checks: mypy ty pyright pyrefly
 
-checks: ruff-check type-checks
+slotscheck:
+	slotscheck $(source_path)
+
+checks: ruff-check type-checks slotscheck
 
 nice: format checks
 

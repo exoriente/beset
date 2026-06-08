@@ -48,7 +48,7 @@ class Infinity(_Singleton):
 
 class NegativeInfinity(_Singleton):
     def __neg__(self) -> "Infinity":
-        return Infinity()
+        return INF
 
     def __eq__(self, other: object) -> bool:
         match other:

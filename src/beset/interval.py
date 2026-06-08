@@ -17,13 +17,10 @@ def _le(a: object, b: object) -> bool:
 
 
 class IntervalSet[T: Sortable]:
-    _intervals: tuple["Interval[T]", ...]
+    __slots__ = ("_intervals",)
 
     def __init__(self, intervals: Iterable["Interval[T]"] = ()) -> None:
-        object.__setattr__(self, "_intervals", tuple(Interval._iterable_union(*intervals)))
-
-    def __setattr__(self, key: str, value: object) -> None:
-        raise AttributeError(f"{self.__class__.__name__} is immutable. Cannot modify '{key}'.")
+        self._intervals: tuple["Interval[T]", ...] = tuple(Interval._iterable_union(*intervals))
 
     @property
     def intervals(self) -> tuple["Interval[T]", ...]:
@@ -170,14 +167,14 @@ class IntervalSet[T: Sortable]:
     def __xor__[U: Sortable](self, other: "IntervalSet[U]", /) -> "IntervalSet[T | U]":
         return self.symmetric_difference(other)
 
-    def finite(self) -> bool:
+    def isbounded(self) -> bool:
         return len(self.intervals) == 0 or (self.intervals[0].start != -INF and self.intervals[-1].stop != INF)
 
-    def infinite(self) -> bool:
+    def isunbounded(self) -> bool:
         return len(self.intervals) > 0 and (self.intervals[0].start == -INF or self.intervals[-1].stop == INF)
 
     def bounded[U: Sortable](self: "IntervalSet[U | InfinityTypes]") -> "IntervalSet[U]":
-        if self.infinite():
+        if self.isunbounded():
             raise TypeError("Bounded cannot be called on infinite interval")
 
         return cast(IntervalSet[U], self)
@@ -234,6 +231,7 @@ class _IntervalMeta(type):
 
 
 class Interval[T: Sortable](IntervalSet[T], metaclass=_IntervalMeta):
+    __slots__ = "_start", "_stop"
     _start: T
     _stop: T
 
@@ -251,6 +249,7 @@ class Interval[T: Sortable](IntervalSet[T], metaclass=_IntervalMeta):
         :param include_upper_bound: true if the interval is closed on the right, false if open
         """
 
+        # Implementation is effectively located in the metaclass
         raise NotImplementedError
 
     @property
@@ -445,14 +444,14 @@ class Interval[T: Sortable](IntervalSet[T], metaclass=_IntervalMeta):
             )
         )
 
-    def finite(self) -> bool:
+    def isbounded(self) -> bool:
         return self.start != -INF and self.stop != INF
 
-    def infinite(self) -> bool:
+    def isunbounded(self) -> bool:
         return self.start == -INF or self.stop == INF
 
     def bounded[U: Sortable](self: "Interval[U | InfinityTypes]") -> "Interval[U]":
-        if self.infinite():
+        if self.isunbounded():
             raise TypeError("Bounded cannot be called on infinite interval")
 
         return cast(Interval[U], self)
@@ -472,9 +471,9 @@ class Interval[T: Sortable](IntervalSet[T], metaclass=_IntervalMeta):
 
 class ConcreteInterval[T: Sortable](Interval[T]):
     def __init__(self, start: T, stop: T) -> None:
-        object.__setattr__(self, "_intervals", (self,))
-        object.__setattr__(self, "_start", start)
-        object.__setattr__(self, "_stop", stop)
+        self._intervals = (self,)
+        self._start = start
+        self._stop = stop
 
 
 class Closed[T: Sortable](ConcreteInterval[T]):
