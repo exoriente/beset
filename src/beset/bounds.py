@@ -1,5 +1,6 @@
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sequence
 from heapq import heappop, heappush
+from itertools import batched, chain
 from typing import cast
 
 from beset.sortable import Sortable
@@ -7,11 +8,21 @@ from beset.sortable import Sortable
 
 class Interval[T: Sortable | None]:
     def __init__(self, intervals: Iterable["MonoInterval[T]"]):
-        self._odd: bool
-        self._bounds: tuple[tuple[T, bool], ...]
+        self._odd, self._bounds = Interval._union_bounds(intervals)
+
+    def __len__(self) -> int:
+        return len(self._bounds) - 1 + self._odd
+
+    def intervals(self) -> Sequence["MonoInterval[T]"]:
+        bounds = chain((None,) * self._odd, self._bounds, (None,) * ((len(self._bounds) + self._odd) % 2))
+        return tuple(
+
+            for index, ((start, start_left), (stop, stop_left)) in
+            enumerate(batched(self._bounds, 2))
+        )
 
     @staticmethod
-    def _iterate_bounds[U: Sortable](bounds: Iterable[Iterable[tuple[U, bool]]]) -> Iterator[tuple[U, bool, int]]:
+    def _iterate_bounds[U: Sortable](bounds: Iterable[Iterable[tuple[U, bool]]]) -> Iterable[tuple[U, bool, int]]:
         iterators = list(map(iter, bounds))
 
         heap: list[tuple[U, bool, int]] = []
@@ -31,34 +42,50 @@ class Interval[T: Sortable | None]:
                 pass
 
     @staticmethod
-    def _bounds_union[U: Sortable](
-        *bounds: tuple[bool, Iterable[tuple[U, bool]]],
-    ) -> tuple[bool, tuple[tuple[U, bool], ...]]:
-        active = [b[0] for b in bounds]
-        odd = any(active)
+    def _generate_union_bounds[U: Sortable](active: list[bool], indexed_bounds: Iterable[tuple[U, bool, int]]) -> Iterable[tuple[U, bool]]:
         total = sum(active)
 
-        new_bounds = []
-
-        for value, left, index in Interval._iterate_bounds(b[1] for b in bounds):
+        for value, left, index in indexed_bounds:
             if active[index]:
                 total -= 1
                 active[index] = False
                 if total == 0:
-                    if new_bounds and new_bounds[-1] == (value, left):
-                        del new_bounds[-1]
-                    else:
-                        new_bounds.append((value, left))
+                    yield value, left
             else:
                 if total == 0:
-                    if new_bounds and new_bounds[-1] == (value, left):
-                        del new_bounds[-1]
-                    else:
-                        new_bounds.append((value, left))
+                    yield value, left
                 total += 1
                 active[index] = True
 
-        return odd, tuple(new_bounds)
+    @staticmethod
+    def _deduplicate_bounds[U](bounds: Iterable[U]) -> Iterable[U]:
+        last = None
+
+        for bound in bounds:
+            if bound == last:
+                last = None
+            else:
+                if last is not None:
+                    yield last
+                last = bound
+
+        if last is not None:
+            yield last
+
+
+    @staticmethod
+    def _union_bounds[U: Sortable](intervals: "Iterable[MonoInterval[U]]"
+    ) -> tuple[bool, tuple[tuple[U, bool], ...]]:
+        intervals = list(intervals)
+        active = [i._odd for i in intervals]
+        odd = any(active)
+        streams = Interval._iterate_bounds(i._bounds for i in intervals)
+
+        new_bounds = tuple(Interval._deduplicate_bounds(Interval._generate_union_bounds(active, streams)))
+
+        return odd, new_bounds
+
+
 
 
 class MonoInterval[T: Sortable | None](Interval[T]):
@@ -79,7 +106,7 @@ class MonoInterval[T: Sortable | None](Interval[T]):
 
     @property
     def start(self) -> T:
-        if self._odd:
+        if self._odd or not self._bounds:
             return cast(T, None)
         else:
             return self._bounds[0][0]
@@ -101,6 +128,6 @@ print(repr(MonoInterval(5, None, True, False)))
 
 x = MonoInterval(2, 5, True, False)
 y = MonoInterval(5, 8, True, False)
-z = MonoInterval(4, 10, True, False)
+z = MonoInterval(7, 10, True, False)
 
-print(Interval._bounds_union((x._odd, x._bounds), (y._odd, y._bounds), (z._odd, z._bounds)))
+print(Interval((x, y, z)))
