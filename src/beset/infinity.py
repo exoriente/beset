@@ -1,14 +1,16 @@
 from abc import ABC
-from typing import Self
+from typing import TypeVar, cast
+
+S = TypeVar("S", bound="_Singleton")
 
 
 class _Singleton(ABC):
-    __instance: Self | None = None
+    __instance: "_Singleton | None" = None
 
-    def __new__(cls) -> Self:
+    def __new__(cls: type[S]) -> S:
         if cls.__instance is None:
-            cls.__instance = super().__new__(cls)
-        return cls.__instance
+            cls.__instance = super().__new__(cls)  # pyright:ignore[reportArgumentType]
+        return cast(S, cls.__instance)
 
 
 class Infinity(_Singleton):
