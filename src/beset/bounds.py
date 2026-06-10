@@ -2,7 +2,7 @@ from collections.abc import Iterable
 from typing import Generic, TypeVar, cast
 
 from beset._operations import union_data
-from beset.bound import IntervalData
+from beset.bound import Bound, IntervalData
 from beset.sortable import Sortable
 
 T = TypeVar("T", covariant=True, bound=Sortable | None)
@@ -30,8 +30,8 @@ class IntervalSet(Generic[T]):
 
 class Interval(IntervalSet[T], Generic[T]):
     def __init__(self, start: T, stop: T, left_closed: bool, right_closed: bool):
-        lower_bound: tuple[tuple[T, bool], ...]
-        upper_bound: tuple[tuple[T, bool], ...]
+        lower_bound: tuple[Bound[T], ...]
+        upper_bound: tuple[Bound[T], ...]
 
         if start is None:
             self._odd = True
@@ -45,18 +45,16 @@ class Interval(IntervalSet[T], Generic[T]):
         self._bounds = lower_bound + upper_bound
 
     @property
+    def _start(self) -> Bound[T] | None:
+        return ((0, True) * self._odd + self._bounds)[0]
+
+    @property
     def start(self) -> T:
-        if self._odd or not self._bounds:
-            return cast(T, None)
-        else:
-            return self._bounds[0][0]
+        return cast(T, (((None,),) * self._odd + self._bounds)[0][0])
 
     @property
     def stop(self) -> T:
-        try:
-            return self._bounds[1 - self._odd][0]
-        except IndexError:
-            return cast(T, None)
+        return cast(T, (((None,),) * self._odd + self._bounds + ((None,),))[1][0])
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.start!r}, {self.stop!r})"
