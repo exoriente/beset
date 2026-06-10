@@ -1,23 +1,25 @@
 from collections.abc import Iterable
 from typing import Generic, TypeVar, cast
 
-from beset._operations import union_bounds
-from beset.bound import IntervalInternals
+from beset._operations import union_data
+from beset.bound import IntervalData
+from beset.sortable import Sortable
 
-T = TypeVar("T", covariant=True)
+T = TypeVar("T", covariant=True, bound=Sortable | None)
+U = TypeVar("U", covariant=True, bound=Sortable | None)
 
 
 class IntervalSet(Generic[T]):
-    def __init__(self, intervals: Iterable["MonoInterval[T]"]):
-        self._odd, self._bounds = union_bounds(i._internals() for i in intervals)  # type:ignore[type-var]
+    def __init__(self, intervals: Iterable["Interval[T]"]):
+        self._odd, self._bounds = union_data(i._data() for i in intervals)  # type:ignore[type-var]
 
-    def _internals(self) -> IntervalInternals[T]:
+    def _data(self) -> IntervalData[T]:
         return self._odd, self._bounds
 
     def __len__(self) -> int:
         return len(self._bounds) - 1 + self._odd
 
-    # def intervals(self) -> Sequence["MonoInterval[T]"]:
+    # def intervals(self) -> Sequence["Interval[T]"]:
     #     bounds = chain((None,) * self._odd, self._bounds, (None,) * ((len(self._bounds) + self._odd) % 2))
     #     return tuple(
     #
@@ -26,7 +28,7 @@ class IntervalSet(Generic[T]):
     #     )
 
 
-class MonoInterval(IntervalSet[T], Generic[T]):
+class Interval(IntervalSet[T], Generic[T]):
     def __init__(self, start: T, stop: T, left_closed: bool, right_closed: bool):
         lower_bound: tuple[tuple[T, bool], ...]
         upper_bound: tuple[tuple[T, bool], ...]
@@ -60,12 +62,12 @@ class MonoInterval(IntervalSet[T], Generic[T]):
         return f"{type(self).__name__}({self.start!r}, {self.stop!r})"
 
 
-print(repr(MonoInterval(0, 5, True, False)))
-print(repr(MonoInterval(None, 5, True, False)))
-print(repr(MonoInterval(5, None, True, False)))
+print(repr(Interval(0, 5, True, False)))
+print(repr(Interval(None, 5, True, False)))
+print(repr(Interval(5, None, True, False)))
 
-x = MonoInterval(2, 5, True, False)
-y = MonoInterval(5, 8, True, False)
-z = MonoInterval(7, 10, True, False)
+x = Interval(2, 5, True, False)
+y = Interval(5, 8, True, False)
+z = Interval(7, 10, True, False)
 
 print(IntervalSet((x,)))

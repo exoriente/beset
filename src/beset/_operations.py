@@ -2,7 +2,7 @@ from collections.abc import Iterable
 from heapq import heappop, heappush
 from typing import TypeVar
 
-from beset.bound import Bound, IntervalInternals
+from beset.bound import Bound, IntervalData
 from beset.sortable import Sortable
 
 T = TypeVar("T", covariant=True, bound=Sortable)
@@ -73,7 +73,10 @@ def close_seams(bounds: Iterable[Bound[T]]) -> Iterable[Bound[T]]:
         yield last
 
 
-def union_bounds(intervals: Iterable[IntervalInternals[T]]) -> IntervalInternals[T]:
+def union_data(intervals: Iterable[IntervalData[T]]) -> IntervalData[T]:
+    """
+    Return the data for a union of the given interval data sets
+    """
     intervals = list(intervals)
     active = [i[0] for i in intervals]
     odd = any(active)
