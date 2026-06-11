@@ -2,7 +2,7 @@ from collections.abc import Iterable
 from heapq import heappop, heappush
 from typing import TypeVar
 
-from beset.bound import Bound, IntervalData
+from beset._interval_data import Bound, IntervalData
 from beset.sortable import Sortable
 
 T = TypeVar("T", covariant=True, bound=Sortable)

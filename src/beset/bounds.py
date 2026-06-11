@@ -2,7 +2,7 @@ from collections.abc import Iterable
 from typing import Generic, TypeVar, cast
 
 from beset._operations import union_data
-from beset.bound import Bound, IntervalData
+from beset._interval_data import Bound, IntervalData
 from beset.sortable import Sortable
 
 T = TypeVar("T", covariant=True, bound=Sortable | None)
@@ -60,12 +60,4 @@ class Interval(IntervalSet[T], Generic[T]):
         return f"{type(self).__name__}({self.start!r}, {self.stop!r})"
 
 
-print(repr(Interval(0, 5, True, False)))
-print(repr(Interval(None, 5, True, False)))
-print(repr(Interval(5, None, True, False)))
 
-x = Interval(2, 5, True, False)
-y = Interval(5, 8, True, False)
-z = Interval(7, 10, True, False)
-
-print(IntervalSet((x,)))
