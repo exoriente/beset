@@ -3,20 +3,33 @@ from typing import TypeVar
 
 T = TypeVar("T", covariant=True)
 
-Bound = tuple[T, bool]
-IntervalData = tuple[bool, tuple[tuple[T, bool], ...]]
+Oddity = bool
+Sinisterity = bool
+
+Bound = tuple[T, Sinisterity]
+IntervalData = tuple[Oddity, Sinisterity, tuple[tuple[T, Sinisterity], ...], Sinisterity]
 UltimateBound = tuple[int, Bound[T]]
 
 
 def interval_type(data: IntervalData) -> str:
     match data:
-        case True, ():  # infinite
+        case True, False, (), False:  # [None ; None)
+            return "ClosedOpen"
+        case True, False, (), True:  # [None ; None]
+            return "Closed"
+        case True, True, (), False:  # (None ; None)
             return "Open"
-        case False, ():  # empty
-            return "Empty"
-        case True, ((_, True),):
+        case True, True, (), True:  # (None ; None]
             return "OpenClosed"
-        case True, ((_, False),):
+        case False, _, (), _:  # Empty
+            return "Empty"
+        case True, False, ((_, True),), _:  # [None ; x]
+            return "Closed"
+        case True, True, ((_, True),), _:  # (None ; x]
+            return "OpenClosed"
+        case True, False, ((_, False),):  # [None ; x)
+            return "ClosedOpen"
+        case True, False, ((_, False),):  # [None ; x)
             return "Open"
         case False, ((_, True),):
             return "Open"
@@ -36,11 +49,3 @@ def interval_type(data: IntervalData) -> str:
             if all(map(itemgetter(1), bounds)):
                 return "OpenClosedSet"
             if alternating(map(itemgetter(1), bounds)):
-
-"""
-closedopen [3, inf> = F(3F)F
-closed [3, inf] = T(3F)T =
-closed [3, 7] = T(3F,7T)F =
-closedopen [-inf, inf> = F()F
-openclosed <-inf, inf] = 
-"""
