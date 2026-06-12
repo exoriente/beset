@@ -1,5 +1,5 @@
 from collections.abc import Iterable
-from itertools import chain, batched, pairwise
+from itertools import chain, pairwise
 from operator import itemgetter
 from typing import TypeVar
 
@@ -10,8 +10,7 @@ Sinisterity = bool
 
 Bound = tuple[T, Sinisterity]
 IntervalData = tuple[Oddity, Sinisterity, tuple[tuple[T, Sinisterity], ...], Sinisterity]
-UltimateBound = tuple[int, Bound[T]]
-
+UltimateBound = tuple[int, T, Sinisterity]
 
 
 def analyze_sinisterity(sinisterities: Iterable[Sinisterity]) -> str:
@@ -20,16 +19,16 @@ def analyze_sinisterity(sinisterities: Iterable[Sinisterity]) -> str:
     b = next(it)
 
     if a and b and all(it):
-        return "ClosedOpen"
+        return "ClosedOpenSet"
     elif not a and not b and not any(it):
-        return "OpenClosed"
+        return "OpenClosedSet"
     elif a != b and all(x != y for x, y in pairwise(chain((b,), it))):
         return "alternating"
     else:
         return "arbitrary"
 
 
-def interval_type(data: IntervalData) -> str:
+def interval_type(data: IntervalData[object]) -> str:
     match data:
         case True, False, (), False:  # [None ; None)
             return "ClosedOpen"
@@ -65,9 +64,16 @@ def interval_type(data: IntervalData) -> str:
             return "Closed"
         case False, _, ((_, True), (_, True)), _:  # (x ; y]
             return "OpenClosed"
-        case odd, neg_inf_sinister, bounds, pos_inf_sinister:
-            if not any(chain((neg_inf_sinister,), map(itemgetter(1), bounds), (pos_inf_sinister,))):
-                return "ClosedOpenSet"
-            if all(chain((neg_inf_sinister,), map(itemgetter(1), bounds), (pos_inf_sinister,))):
-                return "OpenClosedSet"
-            if alternating(chain((neg_inf_sinister,), map(itemgetter(1), bounds), (pos_inf_sinister,))):
+        case odd, _, bounds, _:
+            match analyze_sinisterity(map(itemgetter(1), bounds)):
+                case "ClosedOpenSet" | "OpenClosedSet" as r:
+                    return r
+                case "alternating":
+                    if odd and bounds[0][1]:
+                        return "ClosedSet"
+                    else:
+                        return "OpenSet"
+                case _:
+                    return "IntervalSet"
+
+    return "IntervalSet"

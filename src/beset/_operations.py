@@ -55,6 +55,10 @@ def generate_union_bounds(active: list[bool], tagged_bounds: Iterable[TaggedBoun
             active[index] = True
 
 
+def generate_union_edges(left_edges: Iterable[bool], right_edges: Iterable[bool]) -> tuple[bool, bool]:
+    return not all(left_edges), any(right_edges)
+
+
 def close_seams(bounds: Iterable[Bound[T]]) -> Iterable[Bound[T]]:
     """
     Returns the input stream, but without pairs of consecutive equal values
@@ -77,11 +81,13 @@ def union_data(intervals: Iterable[IntervalData[T]]) -> IntervalData[T]:
     """
     Return the data for a union of the given interval data sets
     """
-    intervals = list(intervals)
-    active = [i[0] for i in intervals]
+    oddities, left_edges, bounds, right_edges = zip(*intervals)
+    active = list(oddities)
     odd = any(active)
-    all_bounds = iterate_bounds(i[1] for i in intervals)
+    all_bounds = iterate_bounds(bounds)
 
     new_bounds = tuple(close_seams(generate_union_bounds(active, all_bounds)))
 
-    return odd, new_bounds
+    left_edge, right_edge = generate_union_edges(left_edges, right_edges)
+
+    return odd, left_edge, new_bounds, right_edge
