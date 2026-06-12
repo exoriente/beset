@@ -1,3 +1,5 @@
+from collections.abc import Iterable
+from itertools import chain, batched, pairwise
 from operator import itemgetter
 from typing import TypeVar
 
@@ -9,6 +11,22 @@ Sinisterity = bool
 Bound = tuple[T, Sinisterity]
 IntervalData = tuple[Oddity, Sinisterity, tuple[tuple[T, Sinisterity], ...], Sinisterity]
 UltimateBound = tuple[int, Bound[T]]
+
+
+
+def analyze_sinisterity(sinisterities: Iterable[Sinisterity]) -> str:
+    it = iter(sinisterities)
+    a = next(it)
+    b = next(it)
+
+    if a and b and all(it):
+        return "ClosedOpen"
+    elif not a and not b and not any(it):
+        return "OpenClosed"
+    elif a != b and all(x != y for x, y in pairwise(chain((b,), it))):
+        return "alternating"
+    else:
+        return "arbitrary"
 
 
 def interval_type(data: IntervalData) -> str:
@@ -27,25 +45,29 @@ def interval_type(data: IntervalData) -> str:
             return "Closed"
         case True, True, ((_, True),), _:  # (None ; x]
             return "OpenClosed"
-        case True, False, ((_, False),):  # [None ; x)
+        case True, False, ((_, False),), _:  # [None ; x)
             return "ClosedOpen"
-        case True, False, ((_, False),):  # [None ; x)
+        case True, True, ((_, False),), _:  # [None ; x)
             return "Open"
-        case False, ((_, True),):
+        case False, _, ((_, True),), False:  # (x ; None)
             return "Open"
-        case False, ((_, False),):
+        case False, _, ((_, False),), False:  # [x ; None)
             return "ClosedOpen"
-        case False, ((_, False), (_, False)):
-            return "ClosedOpen"
-        case False, ((_, True), (_, False)):
-            return "Open"
-        case False, ((_, False), (_, True)):
-            return "Closed"
-        case False, ((_, True), (_, True)):
+        case False, _, ((_, True),), True:  # (x ; None]
             return "OpenClosed"
-        case odd, bounds:
-            if not any(map(itemgetter(1), bounds)):
+        case False, _, ((_, False),), True:  # [x ; None]
+            return "Closed"
+        case False, _, ((_, False), (_, False)), _:  # [x ; y)
+            return "ClosedOpen"
+        case False, _, ((_, True), (_, False)), _:  # (x ; y)
+            return "Open"
+        case False, _, ((_, False), (_, True)), _:  # [x ; y]
+            return "Closed"
+        case False, _, ((_, True), (_, True)), _:  # (x ; y]
+            return "OpenClosed"
+        case odd, neg_inf_sinister, bounds, pos_inf_sinister:
+            if not any(chain((neg_inf_sinister,), map(itemgetter(1), bounds), (pos_inf_sinister,))):
                 return "ClosedOpenSet"
-            if all(map(itemgetter(1), bounds)):
+            if all(chain((neg_inf_sinister,), map(itemgetter(1), bounds), (pos_inf_sinister,))):
                 return "OpenClosedSet"
-            if alternating(map(itemgetter(1), bounds)):
+            if alternating(chain((neg_inf_sinister,), map(itemgetter(1), bounds), (pos_inf_sinister,))):
