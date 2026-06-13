@@ -10,12 +10,12 @@ else:
     from typing_extensions import Never
 
 if version_info >= (3, 12):
-    pass  # type:ignore[attr-defined,unused-ignore]
+    from itertools import batched  # type:ignore[attr-defined,unused-ignore]
 else:
-    pass
+    from beset._itertools import batched
 
 from beset._interval_data import Bound, IntervalData, Sinisterity, UltimateBound
-from beset._operations import union_data
+from beset._operations import union_data, bounds_to_str
 from beset._protocol import Sortable
 
 T = TypeVar("T", covariant=True, bound=Sortable | None)
@@ -148,7 +148,11 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
     def _data(self) -> IntervalData[T]:
         return self._odd, self._left_sinister, self._bounds, self._right_sinister
 
-    # def _bound_pairs(self) -> Iterable[UltimateBound[T]]: ...
+    def _bound_pairs(self) -> Iterable[tuple[Bound[T], Bound[T]]]:
+        bounds = chain(self._odd * ((None, self._left_sinister),), self._bounds, ((None, self._right_sinister),))
+        for pair in batched(bounds, 2):
+            if len(pair) == 2:
+                yield pair
 
     def __eq__(self, other: object, /) -> bool:
         return (self._odd, self._bounds) == (other._odd, other._bounds) if isinstance(other, IntervalSet) else False
@@ -176,6 +180,9 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
     #         for index, ((start, start_left), (stop, stop_left)) in
     #         enumerate(batched(self._bounds, 2))
     #     )
+
+    def __str__(self) -> str:
+        return " | ".join(bounds_to_str(a, b) for a, b in self._bound_pairs())
 
 
 class OpenSet(IntervalSet[T], Generic[T]):
@@ -248,12 +255,7 @@ class Interval(IntervalSet[T], Generic[T]):
         return f"{type(self).__name__}({self.start!r}, {self.stop!r})"
 
     def __str__(self) -> str:
-        left_inf, left, left_sinister = self._start
-        right_inf, right, right_sinister = self._stop
-
-        lower = ("(" if left_sinister else "[") + ("-inf" if left_inf else str(left))
-        upper = ("+inf" if right_inf else str(right)) + ("]" if right_sinister else ")")
-        return f"{lower} ; {upper}"
+        return bounds_to_str(self._start[1:], self._stop[1:])
 
 
 class _ConcreteInterval(Interval[T], Generic[T]):

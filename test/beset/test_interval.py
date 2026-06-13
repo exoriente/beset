@@ -341,3 +341,11 @@ class TestIntervalStr:
         assert str(Closed(None, None)) == "[-inf ; +inf]"
         assert str(OpenClosed(None, None)) == "(-inf ; +inf]"
         assert str(ClosedOpen(None, None)) == "[-inf ; +inf)"
+
+    def test_interval_set(self) -> None:
+        assert str(IntervalSet()) == "[;)"
+        assert str(IntervalSet([Open(0, 1)])) == "(0 ; 1)"
+        assert str(IntervalSet([Open(0, 1), Closed(2, 3)])) == "(0 ; 1) | [2 ; 3]"
+        assert str(IntervalSet([Open(0, 1), Closed(2, 3), ClosedOpen(4, 5)])) == "(0 ; 1) | [2 ; 3] | [4 ; 5)"
+        assert str(IntervalSet([Open(None, 1), Closed(2, 3), ClosedOpen(4, 5)])) == "(-inf ; 1) | [2 ; 3] | [4 ; 5)"
+        assert str(IntervalSet([Open(0, 1), Closed(2, 3), ClosedOpen(4, None)])) == "(0 ; 1) | [2 ; 3] | [4 ; +inf)"

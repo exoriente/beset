@@ -91,3 +91,12 @@ def union_data(intervals: Iterable[IntervalData[T]]) -> IntervalData[T]:
     left_edge, right_edge = generate_union_edges(left_edges, right_edges)
 
     return odd, left_edge, new_bounds, right_edge
+
+
+def bounds_to_str(start: Bound[object], stop: Bound[object]) -> str:
+    left, left_sinister = start
+    right, right_sinister = stop
+
+    lower = ("(" if left_sinister else "[") + ("-inf" if left is None else str(left))
+    upper = ("+inf" if right is None else str(right)) + ("]" if right_sinister else ")")
+    return f"{lower} ; {upper}"
