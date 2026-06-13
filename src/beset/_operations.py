@@ -81,8 +81,8 @@ def union_data(intervals: Iterable[IntervalData[T]]) -> IntervalData[T]:
     """
     Return the data for a union of the given interval data sets
     """
-    oddities, left_edges, bounds, right_edges = zip(*intervals)
-    active = list(oddities)
+    oddities, left_edges, bounds, right_edges = tuple(zip(*intervals)) or ((), (), (), ())
+    active = list[bool](oddities)
     odd = any(active)
     all_bounds = iterate_bounds(bounds)
 
