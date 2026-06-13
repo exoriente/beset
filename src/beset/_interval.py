@@ -9,9 +9,14 @@ if version_info >= (3, 11):
 else:
     from typing_extensions import Never
 
+if version_info >= (3, 12):
+    pass  # type:ignore[attr-defined,unused-ignore]
+else:
+    pass
+
 from beset._interval_data import Bound, IntervalData, Sinisterity, UltimateBound
 from beset._operations import union_data
-from beset.sortable import Sortable
+from beset._protocol import Sortable
 
 T = TypeVar("T", covariant=True, bound=Sortable | None)
 U = TypeVar("U", covariant=True, bound=Sortable | None)
@@ -128,13 +133,13 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
     _bounds: tuple[Bound[T], ...]
     _right_sinister: bool
 
-    def __init__(self, intervals: Iterable["Interval[T]"] = ()):
+    def __init__(self, intervals: Iterable["IntervalSet[T]"] = ()):
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
         raise NotImplementedError
 
     @classmethod
-    def _construct(cls, intervals: Iterable["Interval[T]"] = ()) -> IntervalData[T]:
+    def _construct(cls, intervals: Iterable["IntervalSet[T]"] = ()) -> IntervalData[T]:
         return union_data(map(IntervalSet._data, intervals))  # type:ignore[arg-type]
 
     def _post_construct(self) -> None:
@@ -142,6 +147,8 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
 
     def _data(self) -> IntervalData[T]:
         return self._odd, self._left_sinister, self._bounds, self._right_sinister
+
+    # def _bound_pairs(self) -> Iterable[UltimateBound[T]]: ...
 
     def __eq__(self, other: object, /) -> bool:
         return (self._odd, self._bounds) == (other._odd, other._bounds) if isinstance(other, IntervalSet) else False
@@ -204,14 +211,55 @@ class Interval(IntervalSet[T], Generic[T]):
     _start: UltimateBound[T]
     _stop: UltimateBound[T]
 
-    def __init__(self, start: T, stop: T, left_closed: bool, right_closed: bool):
+    def __init__(self, start: T, stop: T, start_closed: bool, stop_closed: bool):
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
         raise NotImplementedError
 
-    @staticmethod
-    def _sinister_template() -> tuple[bool, bool, bool, bool]:
-        # abstract
+    @classmethod
+    def _construct(cls, start: V, stop: V, start_closed: bool, stop_closed: bool) -> IntervalData[V]:  # type:ignore[ty:invalid-method-override,unused-ignore,override]
+        if start_closed:
+            if stop_closed:
+                return Closed._construct(start, stop)
+            else:
+                return ClosedOpen._construct(start, stop)
+        else:
+            if stop_closed:
+                return OpenClosed._construct(start, stop)
+            else:
+                return Open._construct(start, stop)
+
+    @property
+    def start(self) -> T:
+        return self._start[1]
+
+    @property
+    def stop(self) -> T:
+        return self._stop[1]
+
+    def __contains__(self, item: object) -> bool:
+        value = (0, item, False)
+        try:
+            return not value < self._start and value < self._stop  # type:ignore[ty:unsupported-operator,unused-ignore]
+        except TypeError:
+            return False
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}({self.start!r}, {self.stop!r})"
+
+    def __str__(self) -> str:
+        left_inf, left, left_sinister = self._start
+        right_inf, right, right_sinister = self._stop
+
+        lower = ("(" if left_sinister else "[") + ("-inf" if left_inf else str(left))
+        upper = ("+inf" if right_inf else str(right)) + ("]" if right_sinister else ")")
+        return f"{lower} ; {upper}"
+
+
+class _ConcreteInterval(Interval[T], Generic[T]):
+    def __init__(self, start: T, stop: T):
+        # not in use, metaclass handles initialization
+        # signature provided for IDE detection
         raise NotImplementedError
 
     @classmethod
@@ -254,6 +302,11 @@ class Interval(IntervalSet[T], Generic[T]):
 
         return odd, left_sinister, bounds, right_sinister
 
+    @staticmethod
+    def _sinister_template() -> tuple[bool, bool, bool, bool]:
+        # abstract
+        raise NotImplementedError
+
     def _post_construct(self) -> None:
         far_left, left, right, far_right = self._sinister_template()
         match self._odd, self._bounds:
@@ -269,31 +322,6 @@ class Interval(IntervalSet[T], Generic[T]):
             case False, ((start, start_sinister), (stop, stop_sinister)):
                 self._start = (0, start, start_sinister)
                 self._stop = (0, stop, stop_sinister)
-
-    @property
-    def start(self) -> T:
-        return self._start[1]
-
-    @property
-    def stop(self) -> T:
-        return self._stop[1]
-
-    def __contains__(self, item: object) -> bool:
-        value = (0, item, False)
-        try:
-            return not value < self._start and value < self._stop  # type:ignore[ty:unsupported-operator,unused-ignore]
-        except TypeError:
-            return False
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}({self.start!r}, {self.stop!r})"
-
-
-class _ConcreteInterval(Interval[T], Generic[T]):
-    def __init__(self, start: T, stop: T):
-        # not in use, metaclass handles initialization
-        # signature provided for IDE detection
-        raise NotImplementedError
 
 
 class Open(_ConcreteInterval[T], OpenSet[T], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]

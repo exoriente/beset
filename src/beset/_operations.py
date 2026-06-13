@@ -3,7 +3,7 @@ from heapq import heappop, heappush
 from typing import TypeVar
 
 from beset._interval_data import Bound, IntervalData
-from beset.sortable import Sortable
+from beset._protocol import Sortable
 
 T = TypeVar("T", covariant=True, bound=Sortable)
 

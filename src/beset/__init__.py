@@ -1,4 +1,4 @@
-from beset.interval import (
+from beset._interval import (
     EMPTY,
     Closed,
     ClosedOpen,
@@ -12,7 +12,7 @@ from beset.interval import (
     OpenClosedSet,
     OpenSet,
 )
-from beset.sortable import Sortable
+from beset._protocol import Sortable
 
 __all__ = [
     "Sortable",

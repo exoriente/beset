@@ -9,6 +9,7 @@ from beset import (
     ClosedOpenSet,
     ClosedSet,
     Empty,
+    Interval,
     IntervalSet,
     Open,
     OpenClosed,
@@ -35,13 +36,13 @@ class TestIntervalCreation:
     def test_empty(self) -> None:
         assert type(Empty()) is Empty
 
-    def test_interval(self, interval_class: type[IntervalType[int | None]]) -> None:
+    def test_interval_restricted(self, interval_class: type[IntervalType[int | None]]) -> None:
         assert type(interval_class(0, 1)) is interval_class
         assert type(interval_class(0, None)) is interval_class
         assert type(interval_class(None, 0)) is interval_class
         assert type(interval_class(None, None)) is interval_class
 
-    def test_interval_but_empty(self, interval_class: type[IntervalType[int]]) -> None:
+    def test_interval_restricted_but_empty(self, interval_class: type[IntervalType[int]]) -> None:
         with raises(ValueError):
             type(interval_class(1, 0))
 
@@ -54,6 +55,22 @@ class TestIntervalCreation:
             ClosedOpen(0, 0)
 
         assert Closed(0, 0)
+
+    def test_interval(self) -> None:
+        assert type(Interval(0, 1, False, False)) is Open
+        assert type(Interval(0, 1, False, True)) is OpenClosed
+        assert type(Interval(0, 1, True, False)) is ClosedOpen
+        assert type(Interval(0, 1, True, True)) is Closed
+
+    def test_interval_but_empty(self) -> None:
+        with raises(ValueError):
+            Interval(1, 0, False, False)
+        with raises(ValueError):
+            Interval(1, 0, False, True)
+        with raises(ValueError):
+            Interval(1, 0, True, False)
+        with raises(ValueError):
+            Interval(1, 0, True, True)
 
     def test_interval_set_restricted(self) -> None:
         assert type(OpenSet([Open(0, 1), Open(2, 3)])) is OpenSet
@@ -93,6 +110,9 @@ class TestIntervalCreation:
 
     def test_interval_set_simplification(self) -> None:
         assert IntervalSet() == EMPTY
+        assert IntervalSet([EMPTY, EMPTY]) == EMPTY
+        assert IntervalSet([EMPTY, EMPTY, EMPTY]) == EMPTY
+        assert IntervalSet([Open(0, 4), EMPTY]) == Open(0, 4)
         assert IntervalSet([Open(0, 4), Closed(2, 6)]) == OpenClosed(0, 6)
         assert IntervalSet([Open(None, 4), Closed(2, 6)]) == OpenClosed(None, 6)
         assert IntervalSet([Open(None, 4), Closed(2, 6), ClosedOpen(7, 9)]) == IntervalSet(
@@ -118,6 +138,54 @@ class TestIntervalCovariance:
         assert closed_open
         open_closed: OpenClosed[int] = OpenClosed[bool](False, True)
         assert open_closed
+
+    def test_interval_without_none(self) -> None:
+        """
+        type checkers should be satisfied that the start and stop of an Interval[int] are ints and not None
+        """
+        start_1: int = Open(1, 2).start
+        assert start_1 == 1
+        stop_1: int = Open(1, 2).stop
+        assert stop_1 == 2
+
+        start_2: int = Closed(1, 2).start
+        assert start_2 == 1
+        stop_2: int = Closed(1, 2).stop
+        assert stop_2 == 2
+
+        start_3: int = OpenClosed(1, 2).start
+        assert start_3 == 1
+        stop_3: int = OpenClosed(1, 2).stop
+        assert stop_3 == 2
+
+        start_4: int = ClosedOpen(1, 2).start
+        assert start_4 == 1
+        stop_4: int = ClosedOpen(1, 2).stop
+        assert stop_4 == 2
+
+    def test_interval_with_none(self) -> None:
+        """
+        type checkers should be satisfied that the start and stop of an Interval[int | None] should be optional ints
+        """
+        start_1: int | None = Open(None, 2).start
+        assert start_1 is None
+        stop_1: int | None = Open(None, 2).stop
+        assert stop_1 == 2
+
+        start_2: int | None = Closed(None, 2).start
+        assert start_2 is None
+        stop_2: int | None = Closed(None, 2).stop
+        assert stop_2 == 2
+
+        start_3: int | None = OpenClosed(None, 2).start
+        assert start_3 is None
+        stop_3: int | None = OpenClosed(None, 2).stop
+        assert stop_3 == 2
+
+        start_4: int | None = ClosedOpen(None, 2).start
+        assert start_4 is None
+        stop_4: int | None = ClosedOpen(None, 2).stop
+        assert stop_4 == 2
 
     def test_interval_set(self) -> None:
         """
@@ -223,3 +291,53 @@ class TestIntervalBool:
         assert ClosedOpenSet([ClosedOpen(0, 1), ClosedOpen(2, 3)])
         assert OpenClosedSet([OpenClosed(0, 1), OpenClosed(2, 3)])
         assert IntervalSet([Open(0, 1), Open(2, 3)])
+
+
+class TestIntervalRepr:
+    def test_empty(self) -> None:
+        assert repr(EMPTY) == "Empty()"
+
+    def test_interval(self) -> None:
+        assert repr(Open(0, 1)) == "Open(0, 1)"
+        assert repr(Closed(0, 1)) == "Closed(0, 1)"
+        assert repr(OpenClosed(0, 1)) == "OpenClosed(0, 1)"
+        assert repr(ClosedOpen(0, 1)) == "ClosedOpen(0, 1)"
+
+    def test_interval_unbounded(self) -> None:
+        assert repr(Open(None, 1)) == "Open(None, 1)"
+        assert repr(Closed(None, 1)) == "Closed(None, 1)"
+        assert repr(OpenClosed(None, 1)) == "OpenClosed(None, 1)"
+        assert repr(ClosedOpen(None, 1)) == "ClosedOpen(None, 1)"
+        assert repr(Open(0, None)) == "Open(0, None)"
+        assert repr(Closed(0, None)) == "Closed(0, None)"
+        assert repr(OpenClosed(0, None)) == "OpenClosed(0, None)"
+        assert repr(ClosedOpen(0, None)) == "ClosedOpen(0, None)"
+        assert repr(Open(None, None)) == "Open(None, None)"
+        assert repr(Closed(None, None)) == "Closed(None, None)"
+        assert repr(OpenClosed(None, None)) == "OpenClosed(None, None)"
+        assert repr(ClosedOpen(None, None)) == "ClosedOpen(None, None)"
+
+
+class TestIntervalStr:
+    def test_empty(self) -> None:
+        assert str(EMPTY) == "[;]"
+
+    def test_interval(self) -> None:
+        assert str(Open(0, 1)) == "(0 ; 1)"
+        assert str(Closed(0, 1)) == "[0 ; 1]"
+        assert str(OpenClosed(0, 1)) == "(0 ; 1]"
+        assert str(ClosedOpen(0, 1)) == "[0 ; 1)"
+
+    def test_interval_unbounded(self) -> None:
+        assert str(Open(None, 1)) == "(-inf ; 1)"
+        assert str(Closed(None, 1)) == "[-inf ; 1]"
+        assert str(OpenClosed(None, 1)) == "(-inf ; 1]"
+        assert str(ClosedOpen(None, 1)) == "[-inf ; 1)"
+        assert str(Open(0, None)) == "(0 ; +inf)"
+        assert str(Closed(0, None)) == "[0 ; +inf]"
+        assert str(OpenClosed(0, None)) == "(0 ; +inf]"
+        assert str(ClosedOpen(0, None)) == "[0 ; +inf)"
+        assert str(Open(None, None)) == "(-inf ; +inf)"
+        assert str(Closed(None, None)) == "[-inf ; +inf]"
+        assert str(OpenClosed(None, None)) == "(-inf ; +inf]"
+        assert str(ClosedOpen(None, None)) == "[-inf ; +inf)"
