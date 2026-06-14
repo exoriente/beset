@@ -304,6 +304,163 @@ class TestIntervalIntervals:
         assert IntervalSet([Open(0, 1), Closed(2, 3), Open(4, 5)]).intervals == (Open(0, 1), Closed(2, 3), Open(4, 5))
 
 
+class TestIntervalContains:
+    def test_empty(self) -> None:
+        assert 1 not in EMPTY
+        assert "a" not in EMPTY
+        assert object() not in EMPTY
+        assert None not in EMPTY
+
+    def test_interval(self) -> None:
+        assert 0 not in Open(1, 3)
+        assert 1 not in Open(1, 3)
+        assert 2 in Open(1, 3)
+        assert 3 not in Open(1, 3)
+        assert 4 not in Open(1, 3)
+
+        assert 0 not in Closed(1, 3)
+        assert 1 in Closed(1, 3)
+        assert 2 in Closed(1, 3)
+        assert 3 in Closed(1, 3)
+        assert 4 not in Closed(1, 3)
+
+        assert 0 not in OpenClosed(1, 3)
+        assert 1 not in OpenClosed(1, 3)
+        assert 2 in OpenClosed(1, 3)
+        assert 3 in OpenClosed(1, 3)
+        assert 4 not in OpenClosed(1, 3)
+
+        assert 0 not in ClosedOpen(1, 3)
+        assert 1 in ClosedOpen(1, 3)
+        assert 2 in ClosedOpen(1, 3)
+        assert 3 not in ClosedOpen(1, 3)
+        assert 4 not in ClosedOpen(1, 3)
+
+    def test_interval_zero_length(self) -> None:
+        assert 0 not in Closed(1, 1)
+        assert 1 in Closed(1, 1)
+        assert 2 not in Closed(1, 1)
+
+    def test_interval_different_types(self) -> None:
+        assert 2.718281828 in Open(1, 3)
+        assert "a" not in Open(1, 3)
+        assert object() not in Open(1, 3)
+        assert None not in Open(1, 3)
+
+    def test_interval_unbounded(self) -> None:
+        assert 5 in Open(None, 10)
+        assert 10 not in Open(None, 10)
+        assert 15 not in Open(None, 10)
+        assert 5 not in Open(10, None)
+        assert 10 not in Open(10, None)
+        assert 15 in Open(10, None)
+        assert 5 in Open(None, None)
+
+    def test_interval_set(self) -> None:
+        assert 0 not in (Open(1, 3) | Closed(5, 7))
+        assert 1 not in (Open(1, 3) | Closed(5, 7))
+        assert 2 in (Open(1, 3) | Closed(5, 7))
+        assert 3 not in (Open(1, 3) | Closed(5, 7))
+        assert 4 not in (Open(1, 3) | Closed(5, 7))
+        assert 5 in (Open(1, 3) | Closed(5, 7))
+        assert 6 in (Open(1, 3) | Closed(5, 7))
+        assert 7 in (Open(1, 3) | Closed(5, 7))
+        assert 8 not in (Open(1, 3) | Closed(5, 7))
+
+        assert 0 in (Closed(None, 1) | ClosedOpen(3, 5) | Open(7, None))
+        assert 1 in (Closed(None, 1) | ClosedOpen(3, 5) | Open(7, None))
+        assert 2 not in (Closed(None, 1) | ClosedOpen(3, 5) | Open(7, None))
+        assert 3 in (Closed(None, 1) | ClosedOpen(3, 5) | Open(7, None))
+        assert 4 in (Closed(None, 1) | ClosedOpen(3, 5) | Open(7, None))
+        assert 5 not in (Closed(None, 1) | ClosedOpen(3, 5) | Open(7, None))
+        assert 6 not in (Closed(None, 1) | ClosedOpen(3, 5) | Open(7, None))
+        assert 7 not in (Closed(None, 1) | ClosedOpen(3, 5) | Open(7, None))
+        assert 8 in (Closed(None, 1) | ClosedOpen(3, 5) | Open(7, None))
+
+
+class TestIntervalIsDisjoint:
+    def test_empty(self) -> None:
+        assert EMPTY.isdisjoint()
+        assert EMPTY.isdisjoint(EMPTY)
+        assert EMPTY.isdisjoint(EMPTY, EMPTY)
+        assert EMPTY.isdisjoint(Open(0, 1), Open(2, 3))
+        assert EMPTY.isdisjoint(Open(None, None))
+
+    def test_interval(self) -> None:
+        assert Open(1, 2).isdisjoint()
+        assert Open(1, 2).isdisjoint(EMPTY)
+        assert Open(1, 2).isdisjoint(Open(3, 4))
+        assert Open(1, 2).isdisjoint(Open(3, 4), Open(5, 6))
+        assert Open(1, 2).isdisjoint(Open(2, 3), Open(3, 4))
+        assert not Open(1, 3).isdisjoint(Open(2, 4))
+        assert not Open(1, 2).isdisjoint(Open(3, 5), Open(4, 6))
+        assert not Closed(1, 2).isdisjoint(Closed(2, 3))
+        assert Closed(1, 2).isdisjoint(Open(2, 3))
+
+    def test_interval_unbounded(self) -> None:
+        assert Open(None, 0).isdisjoint(Open(1, None))
+        assert not Open(None, 0).isdisjoint(Open(None, 1))
+        assert not Open(None, None).isdisjoint(Open(0, 1))
+
+    def test_interval_set(self) -> None:
+        assert (Open(1, 2) | Open(3, 4)).isdisjoint()
+        assert (Open(1, 2) | Open(3, 4)).isdisjoint(EMPTY)
+        assert (Open(1, 2) | Open(5, 6)).isdisjoint(Open(3, 4))
+        assert (Open(1, 2) | Open(5, 6)).isdisjoint(Open(3, 4) | Open(7, 8))
+        assert (Open(1, 2) | Open(5, 6)).isdisjoint(Open(3, 4) | Open(7, 8), Open(2, 3) | Open(6, 7))
+        assert not (Open(1, 2) | Open(5, 6)).isdisjoint(Open(3, 4) | Open(7, 8), Open(1, 3) | Open(6, 7))
+        assert not (Open(1, 2) | Open(5, 6)).isdisjoint(Open(3, 4) | ClosedOpen(7, 8), Open(2, 3) | OpenClosed(6, 7))
+
+
+class TestIntervalIsSubset:
+    def test_empty(self) -> None:
+        assert EMPTY <= EMPTY
+        assert EMPTY <= Open(0, 1)
+
+    def test_interval(self) -> None:
+        assert Open(1, 2) <= Open(0, 3)
+        assert Open(1, 2) <= Open(1, 2)
+        assert Open(1, 2) <= Closed(1, 2)
+        assert not Closed(1, 2) <= Open(1, 2)
+
+    def test_interval_unbounded(self) -> None:
+        assert Open(1, 2) <= Open(None, 3)
+        assert Open(None, 2) <= Open(None, 3)
+        assert not Open(None, 2) <= Open(0, 3)
+        assert Open(None, 2) <= Open(None, None)
+
+    def test_interval_set(self) -> None:
+        assert Open(1, 2) <= Closed(1, 2) | Open(3, 4)
+        assert Open(1, 2) | Open(3, 4) <= Closed(1, 2) | Open(3, 4)
+        assert Open(1, 2) | Open(3, 4) <= Closed(None, 2) | Open(3, 4)
+        assert not Open(1, 2) | Open(3, 5) <= Closed(None, 2) | Open(3, 4)
+
+
+class TestIntervalIsProperSubset:
+    def test_empty(self) -> None:
+        assert not EMPTY < EMPTY
+        assert EMPTY < Open(0, 1)
+
+    def test_interval(self) -> None:
+        assert Open(1, 2) < Open(0, 3)
+        assert not Open(1, 2) < Open(1, 2)
+        assert Open(1, 2) < Closed(1, 2)
+        assert not Closed(1, 2) < Open(1, 2)
+
+    def test_interval_unbounded(self) -> None:
+        assert Open(1, 2) < Open(None, 3)
+        assert Open(None, 2) < Open(None, 3)
+        assert not Open(None, 2) < Open(None, 2)
+        assert not Open(None, 2) < Open(0, 3)
+        assert Open(None, 2) < Open(None, None)
+
+    def test_interval_set(self) -> None:
+        assert Open(1, 2) < Closed(1, 2) | Open(3, 4)
+        assert Open(1, 2) | Open(3, 4) < Closed(1, 2) | Open(3, 4)
+        assert not Open(1, 2) | Open(3, 4) < Open(1, 2) | Open(3, 4)
+        assert Open(1, 2) | Open(3, 4) < Closed(None, 2) | Open(3, 4)
+        assert not Open(1, 2) | Open(3, 5) < Closed(None, 2) | Open(3, 4)
+
 class TestIntervalUnion:
     def test_empty(self) -> None:
         assert EMPTY | EMPTY == EMPTY

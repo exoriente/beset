@@ -1,6 +1,7 @@
 from collections.abc import Iterable
 from heapq import heappop, heappush
-from itertools import compress
+from itertools import compress, groupby
+from operator import itemgetter
 from typing import TypeVar
 
 from beset._interval_data import Bound, IntervalData
@@ -11,7 +12,7 @@ T = TypeVar("T", covariant=True, bound=Sortable)
 TaggedBound = tuple[Bound[T], int]
 
 
-def iterate_bounds(bounds: Iterable[Iterable[Bound[T]]]) -> Iterable[TaggedBound[T]]:
+def iterate_bounds_sequential(bounds: Iterable[Iterable[Bound[T]]]) -> Iterable[TaggedBound[T]]:
     """
     Return all bounds, tagged with the index of their source interval, in ascending order
     Do this as a generator reading the source tuples, without copying the data, by assuming the source bounds
@@ -36,42 +37,37 @@ def iterate_bounds(bounds: Iterable[Iterable[Bound[T]]]) -> Iterable[TaggedBound
             pass
 
 
-def close_seams(bounds: Iterable[Bound[T]]) -> Iterable[Bound[T]]:
+def iterate_bounds(bounds: Iterable[Iterable[Bound[T]]]) -> Iterable[tuple[Bound[T], Iterable[TaggedBound[T]]]]:
     """
-    Returns the input stream, but without pairs of consecutive equal values
+    Return all bounds, tagged with the index of their source interval, in ascending order
+    If there are bounds with the same value, return them as a tuple
+    Unique bounds are returned as a tuple of one
     """
-    last = None
-
-    for bound in bounds:
-        if bound == last:
-            last = None
-        else:
-            if last is not None:
-                yield last
-            last = bound
-
-    if last is not None:
-        yield last
+    yield from groupby(iterate_bounds_sequential(bounds), key=itemgetter(0))
 
 
-def generate_union_bounds(active: list[bool], tagged_bounds: Iterable[TaggedBound[T]]) -> Iterable[Bound[T]]:
+def generate_union_bounds(
+    active: list[bool], tagged_bounds: Iterable[tuple[Bound[T], Iterable[TaggedBound[T]]]]
+) -> Iterable[Bound[T]]:
     """
     Return the bound of a union given the input bounds of all intervals in the union
-    Can return duplicate values if one of the intervals ends when another starts
     """
     total = sum(active)
 
-    for bound, index in tagged_bounds:
-        if active[index]:
-            total -= 1
-            active[index] = False
+    for bound, changing in tagged_bounds:
+        delta = 0
+        for _, index in changing:
+            active[index] = (a := not active[index])
+            delta += -1 + 2 * a
+
+        if delta < 0:
+            total += delta
             if total == 0:
                 yield bound
-        else:
+        elif delta > 0:
             if total == 0:
                 yield bound
-            total += 1
-            active[index] = True
+            total += delta
 
 
 def union_data(intervals: Iterable[IntervalData[T]]) -> IntervalData[T]:
@@ -81,35 +77,37 @@ def union_data(intervals: Iterable[IntervalData[T]]) -> IntervalData[T]:
     oddities, left_edges, bounds, right_edges = tuple(zip(*intervals)) or ((), (), (), ())
     active = list[bool](oddities)
     odd = any(active)
-    all_bounds = iterate_bounds(bounds)
-
     left_edge = all(compress(left_edges, active))
 
-    new_bounds = tuple(close_seams(generate_union_bounds(active, all_bounds)))
+    new_bounds = tuple(generate_union_bounds(active, iterate_bounds(bounds)))
 
     right_edge = any(compress(right_edges, active))
 
     return odd, left_edge, new_bounds, right_edge
 
 
-def generate_intersection_bounds(active: list[bool], tagged_bounds: Iterable[TaggedBound[T]]) -> Iterable[Bound[T]]:
+def generate_intersection_bounds(
+    active: list[bool], tagged_bounds: Iterable[tuple[Bound[T], Iterable[TaggedBound[T]]]]
+) -> Iterable[Bound[T]]:
     """
     Return the bound of an intersection given the input bounds of all intervals in the intersection
-    Can return duplicate values if one of the intervals ends when another starts
     """
     total = sum(active)
-    max = len(active)
+    max_active = len(active)
 
-    for bound, index in tagged_bounds:
-        if active[index]:
-            if total == max:
+    for bound, changing in tagged_bounds:
+        delta = 0
+        for _, index in changing:
+            active[index] = (a := not active[index])
+            delta += -1 + 2 * a
+
+        if delta < 0:
+            if total == max_active:
                 yield bound
-            total -= 1
-            active[index] = False
-        else:
-            total += 1
-            active[index] = True
-            if total == max:
+            total += delta
+        elif delta > 0:
+            total += delta
+            if total == max_active:
                 yield bound
 
 
@@ -120,15 +118,104 @@ def intersection_data(intervals: Iterable[IntervalData[T]]) -> IntervalData[T]:
     oddities, left_edges, bounds, right_edges = tuple(zip(*intervals)) or ((), (), (), ())
     active = list[bool](oddities)
     odd = all(active)
-    all_bounds = iterate_bounds(bounds)
 
     left_edge = any(compress(left_edges, active))
 
-    new_bounds = tuple(close_seams(generate_intersection_bounds(active, all_bounds)))
+    new_bounds = tuple(generate_intersection_bounds(active, iterate_bounds(bounds)))
 
     right_edge = all(compress(right_edges, active))
 
     return odd, left_edge, new_bounds, right_edge
+
+
+def check_isdisjoint(active: list[bool], tagged_bounds: Iterable[tuple[Bound[T], Iterable[TaggedBound[T]]]]) -> bool:
+    """
+    Return true if more than one interval is active at the same time while iterating over the bounds
+    """
+    total = sum(active)
+
+    if total > 1:
+        return False
+
+    for bound, changing in tagged_bounds:
+        for _, index in changing:
+            active[index] = (a := not active[index])
+            total += -1 + 2 * a
+
+        if total > 1:
+            return False
+    else:
+        return True
+
+
+def isdisjoint(intervals: Iterable[IntervalData[T]]) -> bool:
+    """
+    Return True iff there is no overlap between any of the intervals
+    """
+    oddities, _, bounds, _ = tuple(zip(*intervals)) or ((), (), (), ())
+    active = list[bool](oddities)
+
+    return check_isdisjoint(active, iterate_bounds(bounds))
+
+
+def check_issubset(active: list[bool], tagged_bounds: Iterable[tuple[Bound[T], Iterable[TaggedBound[T]]]]) -> bool:
+    """
+    Return False if interval 0 is active at any time when interval 1 isn't
+    """
+    if active[0] > active[1]:
+        return False
+
+    for bound, changing in tagged_bounds:
+        for _, index in changing:
+            active[index] = not active[index]
+
+        if active[0] > active[1]:
+            return False
+    else:
+        return True
+
+
+def issubset(a: IntervalData[T], b: IntervalData[T]) -> bool:
+    """
+    Return True iff a is a subset of b
+    """
+    a_odd, _, a_bounds, _ = a
+    b_odd, _, b_bounds, _ = b
+
+    return check_issubset([a_odd, b_odd], iterate_bounds((a_bounds, b_bounds)))
+
+def check_ispropersubset(active: list[bool], tagged_bounds: Iterable[tuple[Bound[T], Iterable[TaggedBound[T]]]]) -> bool:
+    """
+    Return False if interval 0 is active at any time when interval 1 isn't
+    Return False if interval 1 was never active while interval 0 wasn't
+    """
+    if active[0] > active[1]:
+        return False
+
+    proper = active[1] > active[0]
+
+    for bound, changing in tagged_bounds:
+        for _, index in changing:
+            active[index] = not active[index]
+
+        if active[0] > active[1]:
+            return False
+
+        if active[1] > active[0]:
+            proper = True
+    else:
+        return proper
+
+
+def ispropersubset(a: IntervalData[T], b: IntervalData[T]) -> bool:
+    """
+    Return True iff a is a proper subset of b (b is larger)
+    """
+    a_odd, _, a_bounds, _ = a
+    b_odd, _, b_bounds, _ = b
+
+    return check_ispropersubset([a_odd, b_odd], iterate_bounds((a_bounds, b_bounds)))
+
 
 
 SINISTERITY_TO_CLASS_NAME = {
