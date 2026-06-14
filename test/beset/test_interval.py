@@ -320,6 +320,15 @@ class TestIntervalUnion:
         assert Open(0, 3) | Open(1, 3) == Open(0, 3)
         assert Open(0, 3) | OpenClosed(1, 3) == OpenClosed(0, 3)
 
+    def test_interval_unbounded(self) -> None:
+        assert Open(None, None) | Open(2, 3) == Open(None, None)
+        assert Open(None, None) | Open(1, 2) == Open(None, None)
+        assert Open(None, None) | ClosedOpen(1, 2) == Open(None, None)
+        assert Open(None, None) | Open(1, 3) == Open(None, None)
+        assert Open(None, None) | Open(1, 2) == Open(None, None)
+        assert Open(None, None) | Open(1, 3) == Open(None, None)
+        assert Open(None, None) | OpenClosed(1, 3) == Open(None, None)
+
     def test_interval_set(self) -> None:
         assert IntervalSet([Open(0, 1), Open(4, 5)]) | IntervalSet([Open(2, 3), Open(6, 7)]) == IntervalSet(
             [Open(0, 1), Open(2, 3), Open(4, 5), Open(6, 7)]
@@ -331,6 +340,44 @@ class TestIntervalUnion:
         assert Closed(0, 2).union(Open(1, 3), Open(4, 6), Closed(5, 7)) == IntervalSet(
             [ClosedOpen(0, 3), OpenClosed(4, 7)]
         )
+
+
+class TestIntervalIntersection:
+    def test_empty(self) -> None:
+        assert EMPTY & EMPTY == EMPTY
+        assert Open(0, 1) & EMPTY == EMPTY
+        assert Closed(0, 2) & EMPTY == EMPTY
+        assert Closed(0, 3) & Open(2, 4) & EMPTY == EMPTY
+
+    def test_interval(self) -> None:
+        assert Open(0, 1) & Open(2, 3) == EMPTY
+        assert Open(0, 1) & Open(1, 2) == EMPTY
+        assert OpenClosed(0, 1) & ClosedOpen(1, 2) == Closed(1, 1)
+        assert Open(0, 2) & Open(1, 3) == Open(1, 2)
+        assert Open(0, 3) & Open(1, 2) == Open(1, 2)
+        assert Open(0, 3) & Open(1, 3) == Open(1, 3)
+        assert Open(0, 3) & OpenClosed(1, 3) == Open(1, 3)
+
+    def test_interval_unbounded(self) -> None:
+        assert Open(None, None) & Open(2, 3) == Open(2, 3)
+        assert Open(None, None) & Open(1, 2) == Open(1, 2)
+        assert Open(None, None) & ClosedOpen(1, 2) == ClosedOpen(1, 2)
+        assert Open(None, None) & Open(1, 3) == Open(1, 3)
+        assert Open(None, None) & Open(1, 2) == Open(1, 2)
+        assert Open(None, None) & Open(1, 3) == Open(1, 3)
+        assert Open(None, None) & OpenClosed(1, 3) == OpenClosed(1, 3)
+
+    def test_interval_set(self) -> None:
+        assert IntervalSet([Open(0, 1), Open(4, 5)]) & IntervalSet([Open(2, 3), Open(6, 7)]) == EMPTY
+        assert IntervalSet([Open(0, 2), Open(3, 6)]) & IntervalSet([Open(1, 4), Open(5, 7)]) == IntervalSet(
+            [Open(1, 2), Open(3, 4), Open(5, 6)]
+        )
+        assert IntervalSet([Closed(0, 2), Closed(3, 6)]) & IntervalSet([Closed(1, 4), Closed(5, 7)]) == IntervalSet(
+            [Closed(1, 2), Closed(3, 4), Closed(5, 6)]
+        )
+
+    def test_multiple_arguments(self) -> None:
+        assert Closed(0, 10).intersection(Open(None, 6), Open(4, 7), Closed(2, 100)) == Open(4, 6)
 
 
 class TestIntervalRepr:

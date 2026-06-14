@@ -15,7 +15,7 @@ else:
     from beset._itertools import batched  # type:ignore[assignment,unused-ignore]
 
 from beset._interval_data import Bound, IntervalData, Sinisterity, UltimateBound
-from beset._operations import bounds_to_repr, bounds_to_str, union_data
+from beset._operations import bounds_to_repr, bounds_to_str, intersection_data, union_data
 from beset._protocol import Sortable
 
 T = TypeVar("T", covariant=True, bound=Sortable | None)
@@ -219,6 +219,12 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
 
     def __or__(self, other: "IntervalSet[U]", /) -> "IntervalSet[T | U]":
         return create_instance(union_data(map(IntervalSet._data, (self, other))))  # type:ignore[arg-type,type-var]
+
+    def intersection(self, *others: "IntervalSet[U]") -> "IntervalSet[T | U]":
+        return create_instance(intersection_data(map(IntervalSet._data, chain((self,), others))))  # type:ignore[arg-type,type-var]
+
+    def __and__(self, other: "IntervalSet[U]", /) -> "IntervalSet[T | U]":
+        return create_instance(intersection_data(map(IntervalSet._data, (self, other))))  # type:ignore[arg-type,type-var]
 
     def __repr__(self) -> str:
         contents = ", ".join(bounds_to_repr(a, b) for a, b in self._bound_pairs())

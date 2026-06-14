@@ -36,6 +36,24 @@ def iterate_bounds(bounds: Iterable[Iterable[Bound[T]]]) -> Iterable[TaggedBound
             pass
 
 
+def close_seams(bounds: Iterable[Bound[T]]) -> Iterable[Bound[T]]:
+    """
+    Returns the input stream, but without pairs of consecutive equal values
+    """
+    last = None
+
+    for bound in bounds:
+        if bound == last:
+            last = None
+        else:
+            if last is not None:
+                yield last
+            last = bound
+
+    if last is not None:
+        yield last
+
+
 def generate_union_bounds(active: list[bool], tagged_bounds: Iterable[TaggedBound[T]]) -> Iterable[Bound[T]]:
     """
     Return the bound of a union given the input bounds of all intervals in the union
@@ -56,24 +74,6 @@ def generate_union_bounds(active: list[bool], tagged_bounds: Iterable[TaggedBoun
             active[index] = True
 
 
-def close_seams(bounds: Iterable[Bound[T]]) -> Iterable[Bound[T]]:
-    """
-    Returns the input stream, but without pairs of consecutive equal values
-    """
-    last = None
-
-    for bound in bounds:
-        if bound == last:
-            last = None
-        else:
-            if last is not None:
-                yield last
-            last = bound
-
-    if last is not None:
-        yield last
-
-
 def union_data(intervals: Iterable[IntervalData[T]]) -> IntervalData[T]:
     """
     Return the data for a union of the given interval data sets
@@ -88,6 +88,45 @@ def union_data(intervals: Iterable[IntervalData[T]]) -> IntervalData[T]:
     new_bounds = tuple(close_seams(generate_union_bounds(active, all_bounds)))
 
     right_edge = any(compress(right_edges, active))
+
+    return odd, left_edge, new_bounds, right_edge
+
+
+def generate_intersection_bounds(active: list[bool], tagged_bounds: Iterable[TaggedBound[T]]) -> Iterable[Bound[T]]:
+    """
+    Return the bound of an intersection given the input bounds of all intervals in the intersection
+    Can return duplicate values if one of the intervals ends when another starts
+    """
+    total = sum(active)
+    max = len(active)
+
+    for bound, index in tagged_bounds:
+        if active[index]:
+            if total == max:
+                yield bound
+            total -= 1
+            active[index] = False
+        else:
+            total += 1
+            active[index] = True
+            if total == max:
+                yield bound
+
+
+def intersection_data(intervals: Iterable[IntervalData[T]]) -> IntervalData[T]:
+    """
+    Return the data for an intersection of the given interval data sets
+    """
+    oddities, left_edges, bounds, right_edges = tuple(zip(*intervals)) or ((), (), (), ())
+    active = list[bool](oddities)
+    odd = all(active)
+    all_bounds = iterate_bounds(bounds)
+
+    left_edge = any(compress(left_edges, active))
+
+    new_bounds = tuple(close_seams(generate_intersection_bounds(active, all_bounds)))
+
+    right_edge = all(compress(right_edges, active))
 
     return odd, left_edge, new_bounds, right_edge
 
