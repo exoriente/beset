@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 from heapq import heappop, heappush
+from itertools import compress
 from typing import TypeVar
 
 from beset._interval_data import Bound, IntervalData
@@ -55,10 +56,6 @@ def generate_union_bounds(active: list[bool], tagged_bounds: Iterable[TaggedBoun
             active[index] = True
 
 
-def generate_union_edges(left_edges: Iterable[bool], right_edges: Iterable[bool]) -> tuple[bool, bool]:
-    return not all(left_edges), any(right_edges)
-
-
 def close_seams(bounds: Iterable[Bound[T]]) -> Iterable[Bound[T]]:
     """
     Returns the input stream, but without pairs of consecutive equal values
@@ -86,17 +83,41 @@ def union_data(intervals: Iterable[IntervalData[T]]) -> IntervalData[T]:
     odd = any(active)
     all_bounds = iterate_bounds(bounds)
 
+    left_edge = all(compress(left_edges, active))
+
     new_bounds = tuple(close_seams(generate_union_bounds(active, all_bounds)))
 
-    left_edge, right_edge = generate_union_edges(left_edges, right_edges)
+    right_edge = any(compress(right_edges, active))
 
     return odd, left_edge, new_bounds, right_edge
 
 
+SINISTERITY_TO_CLASS_NAME = {
+    (False, False): "ClosedOpen",
+    (False, True): "ClosedOpen",
+    (True, False): "Open",
+    (True, True): "OpenClosed",
+}
+
+
+def bounds_to_repr(start: Bound[object], stop: Bound[object]) -> str:
+    """
+    Return the technical representation for a continuous interval between two bounds:
+    Examples: Closed(3, 7), Closed(-100, None), Open(None, None), ClosedOpen("abc", "bcd")
+    """
+    left, left_sinister = start
+    right, right_sinister = stop
+    return f"{SINISTERITY_TO_CLASS_NAME[left_sinister, right_sinister]}({left!r}, {right!r})"
+
+
 def bounds_to_str(start: Bound[object], stop: Bound[object]) -> str:
+    """
+    Return a nice notation for a continuous interval between two bounds.
+    Examples: [3 ; 7], [-100 ; +inf], (-inf ; + inf), ["abc" ; "bcd")
+    """
     left, left_sinister = start
     right, right_sinister = stop
 
-    lower = ("(" if left_sinister else "[") + ("-inf" if left is None else str(left))
-    upper = ("+inf" if right is None else str(right)) + ("]" if right_sinister else ")")
+    lower = ("(" if left_sinister else "[") + ("-inf" if left is None else repr(left))
+    upper = ("+inf" if right is None else repr(right)) + ("]" if right_sinister else ")")
     return f"{lower} ; {upper}"

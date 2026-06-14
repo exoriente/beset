@@ -293,6 +293,35 @@ class TestIntervalBool:
         assert IntervalSet([Open(0, 1), Open(2, 3)])
 
 
+class TestIntervalUnion:
+    def test_empty(self) -> None:
+        assert EMPTY | EMPTY == EMPTY
+        assert Open(0, 1) | EMPTY == Open(0, 1)
+        assert Closed(0, 2) | EMPTY == Closed(0, 2)
+        assert Closed(0, 2) | Open(4, 6) | EMPTY == Closed(0, 2) | Open(4, 6)
+
+    def test_interval(self) -> None:
+        assert Open(0, 1) | Open(2, 3) == OpenSet([Open(0, 1), Open(2, 3)])
+        assert Open(0, 1) | Open(1, 2) == OpenSet([Open(0, 1), Open(1, 2)])
+        assert Open(0, 1) | ClosedOpen(1, 2) == Open(0, 2)
+        assert Open(0, 2) | Open(1, 3) == Open(0, 3)
+        assert Open(0, 3) | Open(1, 2) == Open(0, 3)
+        assert Open(0, 3) | Open(1, 3) == Open(0, 3)
+        assert Open(0, 3) | OpenClosed(1, 3) == OpenClosed(0, 3)
+
+    def test_interval_set(self) -> None:
+        assert IntervalSet([Open(0, 1), Open(4, 5)]) | IntervalSet([Open(2, 3), Open(6, 7)]) == IntervalSet(
+            [Open(0, 1), Open(2, 3), Open(4, 5), Open(6, 7)]
+        )
+        assert IntervalSet([Open(0, 2), Open(3, 6)]) | IntervalSet([Open(1, 4), Open(5, 7)]) == Open(0, 7)
+        assert IntervalSet([Closed(0, 2), Closed(3, 6)]) | IntervalSet([Closed(1, 4), Closed(5, 7)]) == Closed(0, 7)
+
+    def test_multiple_arguments(self) -> None:
+        assert Closed(0, 2).union(Open(1, 3), Open(4, 6), Closed(5, 7)) == IntervalSet(
+            [ClosedOpen(0, 3), OpenClosed(4, 7)]
+        )
+
+
 class TestIntervalRepr:
     def test_empty(self) -> None:
         assert repr(EMPTY) == "Empty()"
@@ -316,6 +345,22 @@ class TestIntervalRepr:
         assert repr(Closed(None, None)) == "Closed(None, None)"
         assert repr(OpenClosed(None, None)) == "OpenClosed(None, None)"
         assert repr(ClosedOpen(None, None)) == "ClosedOpen(None, None)"
+
+    def test_interval_set(self) -> None:
+        assert (
+            repr(IntervalSet([ClosedOpen(0, 1), ClosedOpen(2, 3)]))
+            == "ClosedOpenSet([ClosedOpen(0, 1), ClosedOpen(2, 3)])"
+        )
+
+    def test_interval_set_unbound(self) -> None:
+        assert (
+            repr(IntervalSet([ClosedOpen(None, 1), ClosedOpen(2, 3)]))
+            == "ClosedOpenSet([ClosedOpen(None, 1), ClosedOpen(2, 3)])"
+        )
+        assert (
+            repr(IntervalSet([ClosedOpen(0, 1), ClosedOpen(2, None)]))
+            == "ClosedOpenSet([ClosedOpen(0, 1), ClosedOpen(2, None)])"
+        )
 
 
 class TestIntervalStr:
@@ -343,9 +388,10 @@ class TestIntervalStr:
         assert str(ClosedOpen(None, None)) == "[-inf ; +inf)"
 
     def test_interval_set(self) -> None:
-        assert str(IntervalSet()) == "[;)"
+        assert str(IntervalSet()) == "[;]"
         assert str(IntervalSet([Open(0, 1)])) == "(0 ; 1)"
         assert str(IntervalSet([Open(0, 1), Closed(2, 3)])) == "(0 ; 1) | [2 ; 3]"
         assert str(IntervalSet([Open(0, 1), Closed(2, 3), ClosedOpen(4, 5)])) == "(0 ; 1) | [2 ; 3] | [4 ; 5)"
         assert str(IntervalSet([Open(None, 1), Closed(2, 3), ClosedOpen(4, 5)])) == "(-inf ; 1) | [2 ; 3] | [4 ; 5)"
         assert str(IntervalSet([Open(0, 1), Closed(2, 3), ClosedOpen(4, None)])) == "(0 ; 1) | [2 ; 3] | [4 ; +inf)"
+        assert str(IntervalSet([Closed(0, 1), Open(2, 3), OpenClosed(4, None)])) == "[0 ; 1] | (2 ; 3) | (4 ; +inf]"

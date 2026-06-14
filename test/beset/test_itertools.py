@@ -13,7 +13,7 @@ class TestBatched:
 
     def test_bad_batch_size(self) -> None:
         with raises(ValueError):
-            list(batched([], 0))
+            list(batched([], 0))  # type:ignore[ty:no-matching-overload,unused-ignore,call-overload]
 
     def test_strict(self) -> None:
         with raises(ValueError):

@@ -2,7 +2,7 @@ from collections.abc import Iterable
 from itertools import chain, pairwise
 from operator import itemgetter
 from sys import version_info
-from typing import Generic, Literal, TypeVar
+from typing import Generic, Literal, TypeVar, cast
 
 if version_info >= (3, 11):
     from typing import Never  # type:ignore[attr-defined,unused-ignore]
@@ -12,10 +12,10 @@ else:
 if version_info >= (3, 12):
     from itertools import batched  # type:ignore[attr-defined,unused-ignore]
 else:
-    from beset._itertools import batched
+    from beset._itertools import batched  # type:ignore[assignment,unused-ignore]
 
 from beset._interval_data import Bound, IntervalData, Sinisterity, UltimateBound
-from beset._operations import union_data, bounds_to_str
+from beset._operations import bounds_to_repr, bounds_to_str, union_data
 from beset._protocol import Sortable
 
 T = TypeVar("T", covariant=True, bound=Sortable | None)
@@ -152,7 +152,7 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
         bounds = chain(self._odd * ((None, self._left_sinister),), self._bounds, ((None, self._right_sinister),))
         for pair in batched(bounds, 2):
             if len(pair) == 2:
-                yield pair
+                yield cast(tuple[Bound[T], Bound[T]], pair)
 
     def __eq__(self, other: object, /) -> bool:
         return (self._odd, self._bounds) == (other._odd, other._bounds) if isinstance(other, IntervalSet) else False
@@ -180,6 +180,10 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
     #         for index, ((start, start_left), (stop, stop_left)) in
     #         enumerate(batched(self._bounds, 2))
     #     )
+
+    def __repr__(self) -> str:
+        contents = ", ".join(bounds_to_repr(a, b) for a, b in self._bound_pairs())
+        return f"{type(self).__name__}([{contents}])"
 
     def __str__(self) -> str:
         return " | ".join(bounds_to_str(a, b) for a, b in self._bound_pairs())

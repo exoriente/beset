@@ -1,6 +1,3 @@
-from collections.abc import Iterable
-from itertools import chain, pairwise
-from operator import itemgetter
 from typing import TypeVar
 
 T = TypeVar("T", covariant=True)
