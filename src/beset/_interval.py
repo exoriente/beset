@@ -2,7 +2,7 @@ from collections.abc import Iterable, Mapping
 from itertools import chain, pairwise
 from operator import itemgetter
 from sys import version_info
-from typing import Any, Generic, Literal, TypeVar, cast
+from typing import Any, Generic, Literal, TypeVar, cast, overload
 
 if version_info >= (3, 11):
     from typing import Never  # type:ignore[attr-defined,unused-ignore]
@@ -220,10 +220,22 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
     def __or__(self, other: "IntervalSet[U]", /) -> "IntervalSet[T | U]":
         return create_instance(union_data(map(IntervalSet._data, (self, other))))  # type:ignore[arg-type,type-var]
 
-    def intersection(self, *others: "IntervalSet[U]") -> "IntervalSet[T | U]":
+    @overload
+    def intersection(self: "IntervalSet[V | None]", *others: "IntervalSet[U]") -> "IntervalSet[V | U]": ...
+
+    @overload
+    def intersection(self: "IntervalSet[V]", *others: "IntervalSet[U | None]") -> "IntervalSet[V | U]": ...  # type:ignore[overload-cannot-match]
+
+    def intersection(self: "IntervalSet[V | None]", *others: "IntervalSet[U]") -> "IntervalSet[V | U]":
         return create_instance(intersection_data(map(IntervalSet._data, chain((self,), others))))  # type:ignore[arg-type,type-var]
 
-    def __and__(self, other: "IntervalSet[U]", /) -> "IntervalSet[T | U]":
+    @overload
+    def __and__(self: "IntervalSet[V | None]", other: "IntervalSet[U]", /) -> "IntervalSet[V | U]": ...
+
+    @overload
+    def __and__(self: "IntervalSet[V]", other: "IntervalSet[U | None]", /) -> "IntervalSet[V | U]": ...  # type:ignore[overload-cannot-match]
+
+    def __and__(self: "IntervalSet[V | None]", other: "IntervalSet[U]", /) -> "IntervalSet[V | U]":
         return create_instance(intersection_data(map(IntervalSet._data, (self, other))))  # type:ignore[arg-type,type-var]
 
     def __repr__(self) -> str:
