@@ -1,8 +1,8 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from itertools import chain, pairwise
 from operator import itemgetter
 from sys import version_info
-from typing import Generic, Literal, TypeVar, cast
+from typing import Any, Generic, Literal, TypeVar, cast
 
 if version_info >= (3, 11):
     from typing import Never  # type:ignore[attr-defined,unused-ignore]
@@ -120,6 +120,45 @@ def create_instance(
     return obj
 
 
+def create_singular_instance(start: Bound[T], stop: Bound[T]) -> "Interval[T]":
+    left, left_sinister = start
+    right, right_sinister = stop
+
+    cls = SINISTERITY_TO_CLASS[left_sinister, right_sinister]
+
+    new_left_bound: tuple[Bound[T], ...]
+    new_right_bound: tuple[Bound[T], ...]
+
+    if left is None:
+        new_odd = True
+        new_left_bound = ()
+        new_left_sinister = left_sinister
+    else:
+        new_odd = False
+        new_left_bound = (start,)
+        new_left_sinister = right_sinister
+
+    if right is None:
+        new_right_bound = ()
+        new_right_sinister = right_sinister
+    else:
+        new_right_bound = (stop,)
+        new_right_sinister = left_sinister
+
+    new_bounds = new_left_bound + new_right_bound
+
+    obj = object().__new__(cls)
+
+    obj._odd = new_odd
+    obj._left_sinister = new_left_sinister
+    obj._bounds = new_bounds
+    obj._right_sinister = new_right_sinister
+
+    obj._post_construct()
+
+    return obj
+
+
 class IntervalMeta(type):
     def __call__(cls: type["IntervalSet[T]"] | type["Empty"], *args, **kwargs):  # type:ignore[no-untyped-def,misc]
         interval_data = cls._construct(*args, **kwargs)
@@ -127,11 +166,12 @@ class IntervalMeta(type):
 
 
 class IntervalSet(Generic[T], metaclass=IntervalMeta):
-    __slots__ = ["_odd", "_left_sinister", "_bounds", "_right_sinister"]
+    __slots__ = ["_odd", "_left_sinister", "_bounds", "_right_sinister", "_intervals_cached"]
     _odd: bool
     _left_sinister: bool
     _bounds: tuple[Bound[T], ...]
     _right_sinister: bool
+    _intervals_cached: tuple["Interval[T]", ...] | None
 
     def __init__(self, intervals: Iterable["IntervalSet[T]"] = ()):
         # not in use, metaclass handles initialization
@@ -143,7 +183,7 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
         return union_data(map(IntervalSet._data, intervals))  # type:ignore[arg-type]
 
     def _post_construct(self) -> None:
-        pass
+        self._intervals_cached = None
 
     def _data(self) -> IntervalData[T]:
         return self._odd, self._left_sinister, self._bounds, self._right_sinister
@@ -167,19 +207,18 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
     def __bool__(self) -> bool:
         return self._odd or bool(self._bounds)
 
+    @property
+    def intervals(self) -> tuple["Interval[T]", ...]:
+        if self._intervals_cached is None:
+            self._intervals_cached = tuple(create_singular_instance(start, stop) for start, stop in self._bound_pairs())
+
+        return self._intervals_cached
+
     def union(self, *others: "IntervalSet[U]") -> "IntervalSet[T | U]":
         return create_instance(union_data(map(IntervalSet._data, chain((self,), others))))  # type:ignore[arg-type,type-var]
 
     def __or__(self, other: "IntervalSet[U]", /) -> "IntervalSet[T | U]":
         return create_instance(union_data(map(IntervalSet._data, (self, other))))  # type:ignore[arg-type,type-var]
-
-    # def intervals(self) -> Sequence["Interval[T]"]:
-    #     bounds = chain((None,) * self._odd, self._bounds, (None,) * ((len(self._bounds) + self._odd) % 2))
-    #     return tuple(
-    #
-    #         for index, ((start, start_left), (stop, stop_left)) in
-    #         enumerate(batched(self._bounds, 2))
-    #     )
 
     def __repr__(self) -> str:
         contents = ", ".join(bounds_to_repr(a, b) for a, b in self._bound_pairs())
@@ -329,6 +368,8 @@ class _ConcreteInterval(Interval[T], Generic[T]):
                 self._start = (0, start, start_sinister)
                 self._stop = (0, stop, stop_sinister)
 
+        self._intervals_cached = (self,)
+
 
 class Open(_ConcreteInterval[T], OpenSet[T], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
     @staticmethod
@@ -356,6 +397,13 @@ class ClosedOpen(_ConcreteInterval[T], ClosedOpenSet[T], Generic[T]):  # pyright
 
 PLURAL_TO_SINGULAR = {OpenSet: Open, ClosedSet: Closed, OpenClosedSet: OpenClosed, ClosedOpenSet: ClosedOpen}
 
+SINISTERITY_TO_CLASS: Mapping[tuple[bool, bool], type[Interval[Any]]] = {
+    (False, False): ClosedOpen,
+    (False, True): ClosedOpen,
+    (True, False): Open,
+    (True, True): OpenClosed,
+}
+
 
 class Empty(OpenSet[Never], ClosedSet[Never], OpenClosedSet[Never], ClosedOpenSet[Never]):
     def __init__(self) -> None:
@@ -366,6 +414,9 @@ class Empty(OpenSet[Never], ClosedSet[Never], OpenClosedSet[Never], ClosedOpenSe
     @classmethod
     def _construct(cls) -> IntervalData[Never]:  # type:ignore[ty:invalid-method-override,unused-ignore,override]
         return False, True, (), False
+
+    def _post_construct(self) -> None:
+        self._intervals_cached = ()
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}()"
