@@ -380,7 +380,7 @@ class _ConcreteInterval(Interval[T], Generic[T]):
         raise NotImplementedError
 
     @classmethod
-    def _construct(cls, start: V, stop: V) -> IntervalData[V]:  # type:ignore[ty:invalid-method-override,unused-ignore,override]
+    def _construct(cls, start: V, stop: V, allow_empty: bool = False) -> IntervalData[V]:  # type:ignore[ty:invalid-method-override,unused-ignore,override]
         far_left, left, right, far_right = cls._sinister_template()
 
         bounds: tuple[Bound[V], ...]
@@ -409,7 +409,10 @@ class _ConcreteInterval(Interval[T], Generic[T]):
                 upper_bound = (stop, right)
 
                 if not lower_bound < upper_bound:  # empty
-                    raise ValueError("Empty interval! Start must be before stop.")
+                    if allow_empty:
+                        return False, right, (), left
+                    else:
+                        raise ValueError("Empty interval! Start must be before stop.")
                 else:
                     left_sinister = far_left
                     right_sinister = far_right
@@ -441,6 +444,12 @@ class _ConcreteInterval(Interval[T], Generic[T]):
                 self._stop = (0, stop, stop_sinister)
 
         self._intervals_cached = (self,)
+
+    S = TypeVar("S", bound="_ConcreteInterval")
+
+    @classmethod
+    def or_empty(cls: type[S], start: T, stop: T) -> "S | Empty":
+        return create_instance(cls._construct(start, stop, allow_empty=True), interval_type=cls)
 
 
 class Open(_ConcreteInterval[T], OpenSet[T], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]

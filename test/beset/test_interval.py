@@ -1,6 +1,6 @@
 from typing import TypeVar
 
-from pytest import raises
+from pytest import fail, raises
 
 from beset import (
     EMPTY,
@@ -22,14 +22,39 @@ T = TypeVar("T", covariant=True, bound=Sortable | None)
 IntervalType = Open[T] | Closed[T] | ClosedOpen[T] | OpenClosed[T]
 
 
-def matches(x: IntervalSet[Sortable | None], y: IntervalSet[Sortable | None]) -> bool:
-    return (
+def assert_exact_match(x: IntervalSet[Sortable | None], y: IntervalSet[Sortable | None]) -> bool:
+    __tracebackhide__ = True
+    if not (
         type(x) is type(y)
         and x._odd == y._odd
         and x._left_sinister == y._left_sinister
         and x._bounds == y._bounds
         and x._right_sinister == y._right_sinister
-    )
+    ):
+        problem = "Intervals not an exact match!\n"
+        for name, attribute in [
+            ("odd", "_odd"),
+            ("left sinister", "_left_sinister"),
+            ("bounds", "_bounds"),
+            ("right sinister", "_right_sinister"),
+        ]:
+            a = getattr(x, attribute)
+            b = getattr(y, attribute)
+            problem += f"{name}: {a} {'==' if a == b else '!='} {b}  {'✅' if a == b else '❌'}\n"
+
+        fail(problem)
+
+
+def assert_not_exact_match(x: IntervalSet[Sortable | None], y: IntervalSet[Sortable | None]) -> bool:
+    __tracebackhide__ = True
+    if (
+        type(x) is type(y)
+        and x._odd == y._odd
+        and x._left_sinister == y._left_sinister
+        and x._bounds == y._bounds
+        and x._right_sinister == y._right_sinister
+    ):
+        fail("Intervals match exactly when the shouldn't!")
 
 
 class TestIntervalCreation:
@@ -118,7 +143,7 @@ class TestIntervalCreation:
         assert IntervalSet([Open(None, 4), Closed(2, 6), ClosedOpen(7, 9)]) == IntervalSet(
             [OpenClosed(None, 6), ClosedOpen(7, 9)]
         )
-        assert matches(
+        assert_exact_match(
             IntervalSet([Open(None, 4), Closed(2, 6), OpenClosed(7, 9)]),
             OpenClosedSet([OpenClosed(None, 6), OpenClosed(7, 9)]),
         )
@@ -202,6 +227,26 @@ class TestIntervalCovariance:
         assert open_closed
         interval_set: IntervalSet[int | float] = IntervalSet[int]((Open(0, 1), Open(2, 3)))
         assert interval_set
+
+
+class TestIntervalOrEmpty:
+    def test_interval_reversed(self) -> None:
+        assert Open.or_empty(1, 0) == EMPTY
+        assert Closed.or_empty(1, 0) == EMPTY
+        assert OpenClosed.or_empty(1, 0) == EMPTY
+        assert ClosedOpen.or_empty(1, 0) == EMPTY
+
+    def test_interval_reversed_exact_match(self) -> None:
+        assert_exact_match(Open.or_empty(1, 0), ~Closed(None, None))
+        assert_exact_match(Closed.or_empty(1, 0), ~Open(None, None))
+        assert_exact_match(OpenClosed.or_empty(1, 0), ~OpenClosed(None, None))
+        assert_exact_match(ClosedOpen.or_empty(1, 0), ~ClosedOpen(None, None))
+
+    def test_interval(self) -> None:
+        assert_exact_match(Open.or_empty(0, 1), Open(0, 1))
+        assert_exact_match(Closed.or_empty(0, 1), Closed(0, 1))
+        assert_exact_match(OpenClosed.or_empty(0, 1), OpenClosed(0, 1))
+        assert_exact_match(ClosedOpen.or_empty(0, 1), ClosedOpen(0, 1))
 
 
 class TestIntervalEquals:
@@ -609,37 +654,61 @@ class TestIntervalIntersection:
         assert d == ClosedOpen(0, 10)
 
 
+class TestIntervalDifference:
+    def test_empty(self) -> None:
+        assert EMPTY - EMPTY == EMPTY
+        assert Open(0, 1) - EMPTY == Open(0, 1)
+        assert Open(0, None) - EMPTY == Open(0, None)
+        assert Open(None, 0) - EMPTY == Open(None, 0)
+        assert Open(None, None) - EMPTY == Open(None, None)
+        assert EMPTY - Open(0, 1) == EMPTY
+        assert EMPTY - Open(0, None) == EMPTY
+        assert EMPTY - Open(None, 0) == EMPTY
+        assert EMPTY - Open(None, None) == EMPTY
+
+    def test_match_intersection_of_complement(self) -> None:
+        assert_exact_match(Open(0, 1) - EMPTY, Open(0, 1) & ~EMPTY)
+        assert_exact_match(Open(0, 1) - EMPTY, Open(0, 1) & ~ EMPTY)
+        assert_exact_match(Open(0, None) - EMPTY, Open(0, None) & ~ EMPTY)
+        assert_exact_match(Open(None, 0) - EMPTY, Open(None, 0) & ~ EMPTY)
+        assert_exact_match(Open(None, None) - EMPTY, Open(None, None) & ~ EMPTY)
+        assert_exact_match(EMPTY - Open(0, 1), EMPTY & ~ Open(0, 1))
+        assert_exact_match(EMPTY - Open(0, None), EMPTY & ~ Open(0, None))
+        assert_exact_match(EMPTY - Open(None, 0), EMPTY & ~ Open(None, 0))
+        assert_exact_match(EMPTY - Open(None, None), EMPTY & ~ Open(None, None))
+
+
 class TestIntervalComplement:
     def test_empty(self) -> None:
-        assert matches(~EMPTY, Open(None, None))
-        assert matches(EMPTY, ~Open(None, None))
+        assert_exact_match(~EMPTY, Open(None, None))
+        assert_exact_match(EMPTY, ~Open(None, None))
 
     def test_interval(self) -> None:
-        assert matches(~Open(0, 1), Closed(None, 0) | Closed(1, None))
-        assert matches(Open(0, 1), ~(Closed(None, 0) | Closed(1, None)))
-        assert matches(~Closed(0, 1), Open(None, 0) | Open(1, None))
-        assert matches(Closed(0, 1), ~(Open(None, 0) | Open(1, None)))
-        assert matches(~OpenClosed(0, 1), OpenClosed(None, 0) | OpenClosed(1, None))
-        assert matches(OpenClosed(0, 1), ~(OpenClosed(None, 0) | OpenClosed(1, None)))
-        assert matches(~ClosedOpen(0, 1), ClosedOpen(None, 0) | ClosedOpen(1, None))
-        assert matches(ClosedOpen(0, 1), ~(ClosedOpen(None, 0) | ClosedOpen(1, None)))
+        assert_exact_match(~Open(0, 1), Closed(None, 0) | Closed(1, None))
+        assert_exact_match(Open(0, 1), ~(Closed(None, 0) | Closed(1, None)))
+        assert_exact_match(~Closed(0, 1), Open(None, 0) | Open(1, None))
+        assert_exact_match(Closed(0, 1), ~(Open(None, 0) | Open(1, None)))
+        assert_exact_match(~OpenClosed(0, 1), OpenClosed(None, 0) | OpenClosed(1, None))
+        assert_exact_match(OpenClosed(0, 1), ~(OpenClosed(None, 0) | OpenClosed(1, None)))
+        assert_exact_match(~ClosedOpen(0, 1), ClosedOpen(None, 0) | ClosedOpen(1, None))
+        assert_exact_match(ClosedOpen(0, 1), ~(ClosedOpen(None, 0) | ClosedOpen(1, None)))
 
     def test_interval_unbound(self) -> None:
-        assert matches(~Open(None, 0), Closed(0, None))
-        assert matches(Open(None, 0), ~Closed(0, None))
-        assert matches(~Closed(None, 0), Open(0, None))
-        assert matches(Closed(None, 0), ~Open(0, None))
-        assert matches(~OpenClosed(None, 0), OpenClosed(0, None))
-        assert matches(OpenClosed(None, 0), ~OpenClosed(0, None))
-        assert matches(~ClosedOpen(None, 0), ClosedOpen(0, None))
-        assert matches(ClosedOpen(None, 0), ~ClosedOpen(0, None))
+        assert_exact_match(~Open(None, 0), Closed(0, None))
+        assert_exact_match(Open(None, 0), ~Closed(0, None))
+        assert_exact_match(~Closed(None, 0), Open(0, None))
+        assert_exact_match(Closed(None, 0), ~Open(0, None))
+        assert_exact_match(~OpenClosed(None, 0), OpenClosed(0, None))
+        assert_exact_match(OpenClosed(None, 0), ~OpenClosed(0, None))
+        assert_exact_match(~ClosedOpen(None, 0), ClosedOpen(0, None))
+        assert_exact_match(ClosedOpen(None, 0), ~ClosedOpen(0, None))
 
     def test_interval_infinite(self) -> None:
         # only Open(None, None) is the technical complement of EMPTY
-        assert matches(~Open(None, None), EMPTY)  #    match: ~(-inf ; +inf) == [;]
-        assert not matches(~Closed(None, None), EMPTY)  # no match: ~[-inf ; +inf] == (;)
-        assert not matches(~OpenClosed(None, None), EMPTY)  # no match: ~(-inf ; +inf] == (;]
-        assert not matches(~ClosedOpen(None, None), EMPTY)  # no match: ~[-inf ; +inf) == [;)
+        assert_exact_match(~Open(None, None), EMPTY)  #              match: ~(-inf ; +inf) == [;]
+        assert_not_exact_match(~Closed(None, None), EMPTY)  #     no match: ~[-inf ; +inf] == (;)
+        assert_not_exact_match(~OpenClosed(None, None), EMPTY)  # no match: ~(-inf ; +inf] == (;]
+        assert_not_exact_match(~ClosedOpen(None, None), EMPTY)  # no match: ~[-inf ; +inf) == [;)
 
         # but all other sets are the functional complements regardless
         assert ~Open(None, None) == EMPTY
