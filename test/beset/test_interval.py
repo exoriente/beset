@@ -634,11 +634,10 @@ class TestIntervalComplement:
         assert matches(~ClosedOpen(None, 0), ClosedOpen(0, None))
         assert matches(ClosedOpen(None, 0), ~ClosedOpen(0, None))
 
-
     def test_interval_infinite(self) -> None:
         # only Open(None, None) is the technical complement of EMPTY
-        assert matches(~Open(None, None), EMPTY)            #    match: ~(-inf ; +inf) == [;]
-        assert not matches(~Closed(None, None), EMPTY)      # no match: ~[-inf ; +inf] == (;)
+        assert matches(~Open(None, None), EMPTY)  #    match: ~(-inf ; +inf) == [;]
+        assert not matches(~Closed(None, None), EMPTY)  # no match: ~[-inf ; +inf] == (;)
         assert not matches(~OpenClosed(None, None), EMPTY)  # no match: ~(-inf ; +inf] == (;]
         assert not matches(~ClosedOpen(None, None), EMPTY)  # no match: ~[-inf ; +inf) == [;)
 
@@ -649,8 +648,26 @@ class TestIntervalComplement:
         assert ~ClosedOpen(None, None) == EMPTY
 
     def test_interval_set(self) -> None:
-        raise NotImplementedError
-
+        assert ~(Open(0, 1) | Open(2, 3) | Open(4, 5)) == Closed(None, 0) | Closed(1, 2) | Closed(3, 4) | Closed(
+            5, None
+        )
+        assert Open(0, 1) | Open(2, 3) | Open(4, 5) == ~(
+            Closed(None, 0) | Closed(1, 2) | Closed(3, 4) | Closed(5, None)
+        )
+        assert ~(Closed(0, 1) | Closed(2, 3) | Closed(4, 5)) == Open(None, 0) | Open(1, 2) | Open(3, 4) | Open(5, None)
+        assert Closed(0, 1) | Closed(2, 3) | Closed(4, 5) == ~(Open(None, 0) | Open(1, 2) | Open(3, 4) | Open(5, None))
+        assert ~(OpenClosed(0, 1) | OpenClosed(2, 3) | OpenClosed(4, 5)) == OpenClosed(None, 0) | OpenClosed(
+            1, 2
+        ) | OpenClosed(3, 4) | OpenClosed(5, None)
+        assert OpenClosed(0, 1) | OpenClosed(2, 3) | OpenClosed(4, 5) == ~(
+            OpenClosed(None, 0) | OpenClosed(1, 2) | OpenClosed(3, 4) | OpenClosed(5, None)
+        )
+        assert ~(ClosedOpen(0, 1) | ClosedOpen(2, 3) | ClosedOpen(4, 5)) == ClosedOpen(None, 0) | ClosedOpen(
+            1, 2
+        ) | ClosedOpen(3, 4) | ClosedOpen(5, None)
+        assert ClosedOpen(0, 1) | ClosedOpen(2, 3) | ClosedOpen(4, 5) == ~(
+            ClosedOpen(None, 0) | ClosedOpen(1, 2) | ClosedOpen(3, 4) | ClosedOpen(5, None)
+        )
 
 
 class TestIntervalRepr:

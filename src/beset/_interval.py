@@ -19,12 +19,13 @@ from beset._interval_data import Bound, IntervalData, Sinisterity, UltimateBound
 from beset._operations import (
     bounds_to_repr,
     bounds_to_str,
+    complement_data,
     difference_data,
     intersection_data,
     is_disjoint,
     is_proper_subset,
     is_subset,
-    union_data, complement_data,
+    union_data,
 )
 from beset._protocol import Sortable
 
@@ -286,10 +287,10 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
         return create_instance(difference_data(self._data(), other._data()))  # type:ignore[ty:invalid-argument-type,unused-ignore,arg-type,type-var]
 
     def complement(self) -> "IntervalSet[T | None]":
-        return create_instance(complement_data(self._data()))
+        return create_instance(complement_data(self._data()))  # type:ignore[ty:invalid-argument-type,unused-ignore,type-var]
 
     def __invert__(self) -> "IntervalSet[T | None]":
-        return create_instance(complement_data(self._data()))
+        return create_instance(complement_data(self._data()))  # type:ignore[ty:invalid-argument-type,unused-ignore,type-var]
 
     def __repr__(self) -> str:
         contents = ", ".join(bounds_to_repr(a, b) for a, b in self._bound_pairs())

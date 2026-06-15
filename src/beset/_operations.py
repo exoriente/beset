@@ -261,7 +261,6 @@ def complement_data(d: IntervalData[T]) -> IntervalData[T]:
     return not odd, left_sinister, bounds, right_sinister
 
 
-
 SINISTERITY_TO_CLASS_NAME = {
     (False, False): "ClosedOpen",
     (False, True): "ClosedOpen",
