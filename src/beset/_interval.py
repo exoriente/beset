@@ -16,7 +16,16 @@ else:
     from beset._itertools import batched  # type:ignore[assignment,unused-ignore]
 
 from beset._interval_data import Bound, IntervalData, Sinisterity, UltimateBound
-from beset._operations import bounds_to_repr, bounds_to_str, intersection_data, isdisjoint, issubset, union_data, ispropersubset
+from beset._operations import (
+    bounds_to_repr,
+    bounds_to_str,
+    difference_data,
+    intersection_data,
+    is_disjoint,
+    is_proper_subset,
+    is_subset,
+    union_data, complement_data,
+)
 from beset._protocol import Sortable
 
 T = TypeVar("T", covariant=True, bound=Sortable | None)
@@ -226,16 +235,25 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
         return index % 2 != self._odd
 
     def isdisjoint(self, *others: "IntervalSet[U]") -> bool:
-        return isdisjoint(map(IntervalSet._data, chain((self,), others)))  # type:ignore[type-var]
+        return is_disjoint(map(IntervalSet._data, chain((self,), others)))  # type:ignore[type-var]
 
     def issubset(self, other: "IntervalSet[U]", /) -> bool:
-        return issubset(self._data(), other._data())  # type:ignore[ty:invalid-argument-type,unused-ignore,type-var]
+        return is_subset(self._data(), other._data())  # type:ignore[ty:invalid-argument-type,unused-ignore,type-var]
 
     def __le__(self, other: "IntervalSet[U]", /) -> bool:
-        return issubset(self._data(), other._data())  # type:ignore[ty:invalid-argument-type,unused-ignore,type-var]
+        return is_subset(self._data(), other._data())  # type:ignore[ty:invalid-argument-type,unused-ignore,type-var]
 
     def __lt__(self, other: "IntervalSet[U]", /) -> bool:
-        return ispropersubset(self._data(), other._data())  # type:ignore[ty:invalid-argument-type,unused-ignore,type-var]
+        return is_proper_subset(self._data(), other._data())  # type:ignore[ty:invalid-argument-type,unused-ignore,type-var]
+
+    def issuperset(self, other: "IntervalSet[U]", /) -> bool:
+        return is_subset(other._data(), self._data())  # type:ignore[ty:invalid-argument-type,unused-ignore,type-var]
+
+    def __ge__(self, other: "IntervalSet[U]", /) -> bool:
+        return is_subset(other._data(), self._data())  # type:ignore[ty:invalid-argument-type,unused-ignore,type-var]
+
+    def __gt__(self, other: "IntervalSet[U]", /) -> bool:
+        return is_proper_subset(other._data(), self._data())  # type:ignore[ty:invalid-argument-type,unused-ignore,type-var]
 
     def union(self, *others: "IntervalSet[U]") -> "IntervalSet[T | U]":
         return create_instance(union_data(map(IntervalSet._data, chain((self,), others))))  # type:ignore[arg-type,type-var]
@@ -260,6 +278,18 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
 
     def __and__(self: "IntervalSet[V | None]", other: "IntervalSet[U]", /) -> "IntervalSet[V | U]":
         return create_instance(intersection_data(map(IntervalSet._data, (self, other))))  # type:ignore[arg-type,type-var]
+
+    def difference(self: "IntervalSet[V]", other: "IntervalSet[U  | None]", /) -> "IntervalSet[V | U]":
+        return create_instance(difference_data(self._data(), other._data()))  # type:ignore[ty:invalid-argument-type,unused-ignore,arg-type,type-var]
+
+    def __sub__(self: "IntervalSet[V]", other: "IntervalSet[U  | None]", /) -> "IntervalSet[V | U]":
+        return create_instance(difference_data(self._data(), other._data()))  # type:ignore[ty:invalid-argument-type,unused-ignore,arg-type,type-var]
+
+    def complement(self) -> "IntervalSet[T | None]":
+        return create_instance(complement_data(self._data()))
+
+    def __invert__(self) -> "IntervalSet[T | None]":
+        return create_instance(complement_data(self._data()))
 
     def __repr__(self) -> str:
         contents = ", ".join(bounds_to_repr(a, b) for a, b in self._bound_pairs())

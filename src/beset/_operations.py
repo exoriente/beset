@@ -128,7 +128,7 @@ def intersection_data(intervals: Iterable[IntervalData[T]]) -> IntervalData[T]:
     return odd, left_edge, new_bounds, right_edge
 
 
-def check_isdisjoint(active: list[bool], tagged_bounds: Iterable[tuple[Bound[T], Iterable[TaggedBound[T]]]]) -> bool:
+def check_is_disjoint(active: list[bool], tagged_bounds: Iterable[tuple[Bound[T], Iterable[TaggedBound[T]]]]) -> bool:
     """
     Return true if more than one interval is active at the same time while iterating over the bounds
     """
@@ -148,17 +148,17 @@ def check_isdisjoint(active: list[bool], tagged_bounds: Iterable[tuple[Bound[T],
         return True
 
 
-def isdisjoint(intervals: Iterable[IntervalData[T]]) -> bool:
+def is_disjoint(intervals: Iterable[IntervalData[T]]) -> bool:
     """
     Return True iff there is no overlap between any of the intervals
     """
     oddities, _, bounds, _ = tuple(zip(*intervals)) or ((), (), (), ())
     active = list[bool](oddities)
 
-    return check_isdisjoint(active, iterate_bounds(bounds))
+    return check_is_disjoint(active, iterate_bounds(bounds))
 
 
-def check_issubset(active: list[bool], tagged_bounds: Iterable[tuple[Bound[T], Iterable[TaggedBound[T]]]]) -> bool:
+def check_is_subset(active: list[bool], tagged_bounds: Iterable[tuple[Bound[T], Iterable[TaggedBound[T]]]]) -> bool:
     """
     Return False if interval 0 is active at any time when interval 1 isn't
     """
@@ -175,16 +175,19 @@ def check_issubset(active: list[bool], tagged_bounds: Iterable[tuple[Bound[T], I
         return True
 
 
-def issubset(a: IntervalData[T], b: IntervalData[T]) -> bool:
+def is_subset(a: IntervalData[T], b: IntervalData[T]) -> bool:
     """
     Return True iff a is a subset of b
     """
     a_odd, _, a_bounds, _ = a
     b_odd, _, b_bounds, _ = b
 
-    return check_issubset([a_odd, b_odd], iterate_bounds((a_bounds, b_bounds)))
+    return check_is_subset([a_odd, b_odd], iterate_bounds((a_bounds, b_bounds)))
 
-def check_ispropersubset(active: list[bool], tagged_bounds: Iterable[tuple[Bound[T], Iterable[TaggedBound[T]]]]) -> bool:
+
+def check_is_proper_subset(
+    active: list[bool], tagged_bounds: Iterable[tuple[Bound[T], Iterable[TaggedBound[T]]]]
+) -> bool:
     """
     Return False if interval 0 is active at any time when interval 1 isn't
     Return False if interval 1 was never active while interval 0 wasn't
@@ -207,14 +210,55 @@ def check_ispropersubset(active: list[bool], tagged_bounds: Iterable[tuple[Bound
         return proper
 
 
-def ispropersubset(a: IntervalData[T], b: IntervalData[T]) -> bool:
+def is_proper_subset(a: IntervalData[T], b: IntervalData[T]) -> bool:
     """
     Return True iff a is a proper subset of b (b is larger)
     """
     a_odd, _, a_bounds, _ = a
     b_odd, _, b_bounds, _ = b
 
-    return check_ispropersubset([a_odd, b_odd], iterate_bounds((a_bounds, b_bounds)))
+    return check_is_proper_subset([a_odd, b_odd], iterate_bounds((a_bounds, b_bounds)))
+
+
+def generate_difference_bounds(
+    active: list[bool], tagged_bounds: Iterable[tuple[Bound[T], Iterable[TaggedBound[T]]]]
+) -> Iterable[Bound[T]]:
+    """
+    Return the bounds where interval 0 and interval 1 is not
+    """
+    for bound, changing in tagged_bounds:
+        old_active = active[0] and not active[1]
+        for _, index in changing:
+            active[index] = not active[index]
+        if old_active != (active[0] and not active[1]):
+            yield bound
+
+
+def difference_data(a: IntervalData[T], b: IntervalData[T]) -> IntervalData[T]:
+    """
+    Return IntervalData for an IntervalSet that contains everything from a unless it's in b
+    """
+    a_odd, a_left_sinister, a_bounds, a_right_sinister = a
+    b_odd, b_left_sinister, b_bounds, b_right_sinister = b
+    active = [a_odd, b_odd]
+
+    odd = a_odd and not b_odd
+
+    left_sinister = (a_left_sinister and active[0]) or (b_left_sinister and not active[1])
+
+    bounds = tuple(generate_difference_bounds(active, iterate_bounds((a_bounds, b_bounds))))
+
+    right_sinister = (a_right_sinister and active[0]) and (b_right_sinister and not active[1])
+
+    return odd, left_sinister, bounds, right_sinister
+
+
+def complement_data(d: IntervalData[T]) -> IntervalData[T]:
+    """
+    Return IntervalData for the complement of d
+    """
+    odd, left_sinister, bounds, right_sinister = d
+    return not odd, left_sinister, bounds, right_sinister
 
 
 

@@ -461,6 +461,57 @@ class TestIntervalIsProperSubset:
         assert Open(1, 2) | Open(3, 4) < Closed(None, 2) | Open(3, 4)
         assert not Open(1, 2) | Open(3, 5) < Closed(None, 2) | Open(3, 4)
 
+
+class TestIntervalIsSuperset:
+    def test_empty(self) -> None:
+        assert EMPTY >= EMPTY
+        assert Open(0, 1) >= EMPTY
+
+    def test_interval(self) -> None:
+        assert Open(0, 3) >= Open(1, 2)
+        assert Open(1, 2) >= Open(1, 2)
+        assert Closed(1, 2) >= Open(1, 2)
+        assert not Open(1, 2) >= Closed(1, 2)
+
+    def test_interval_unbounded(self) -> None:
+        assert Open(None, 3) >= Open(1, 2)
+        assert Open(None, 3) >= Open(None, 2)
+        assert not Open(0, 3) >= Open(None, 2)
+        assert Open(None, None) >= Open(None, 2)
+
+    def test_interval_set(self) -> None:
+        assert Closed(1, 2) | Open(3, 4) >= Open(1, 2)
+        assert Closed(1, 2) | Open(3, 4) >= Open(1, 2) | Open(3, 4)
+        assert Closed(None, 2) | Open(3, 4) >= Open(1, 2) | Open(3, 4)
+        assert not Closed(None, 2) | Open(3, 4) >= Open(1, 2) | Open(3, 5)
+
+
+class TestIntervalIsProperSuperset:
+    def test_empty(self) -> None:
+        assert not EMPTY > EMPTY
+        assert Open(0, 1) > EMPTY
+
+    def test_interval(self) -> None:
+        assert Open(0, 3) > Open(1, 2)
+        assert not Open(1, 2) > Open(1, 2)
+        assert Closed(1, 2) > Open(1, 2)
+        assert not Open(1, 2) > Closed(1, 2)
+
+    def test_interval_unbounded(self) -> None:
+        assert Open(None, 3) > Open(1, 2)
+        assert Open(None, 3) > Open(None, 2)
+        assert not Open(None, 2) > Open(None, 2)
+        assert not Open(0, 3) > Open(None, 2)
+        assert Open(None, None) > Open(None, 2)
+
+    def test_interval_set(self) -> None:
+        assert Closed(1, 2) | Open(3, 4) > Open(1, 2)
+        assert Closed(1, 2) | Open(3, 4) > Open(1, 2) | Open(3, 4)
+        assert not Open(1, 2) | Open(3, 4) > Open(1, 2) | Open(3, 4)
+        assert Closed(None, 2) | Open(3, 4) > Open(1, 2) | Open(3, 4)
+        assert not Closed(None, 2) | Open(3, 4) > Open(1, 2) | Open(3, 5)
+
+
 class TestIntervalUnion:
     def test_empty(self) -> None:
         assert EMPTY | EMPTY == EMPTY
@@ -556,6 +607,50 @@ class TestIntervalIntersection:
 
         d: IntervalSet[int] = Closed(0, 100).intersection(Open(None, 10), Open(-50, 50))  # type:ignore[ty:invalid-assignment,unused-ignore]
         assert d == ClosedOpen(0, 10)
+
+
+class TestIntervalComplement:
+    def test_empty(self) -> None:
+        assert matches(~EMPTY, Open(None, None))
+        assert matches(EMPTY, ~Open(None, None))
+
+    def test_interval(self) -> None:
+        assert matches(~Open(0, 1), Closed(None, 0) | Closed(1, None))
+        assert matches(Open(0, 1), ~(Closed(None, 0) | Closed(1, None)))
+        assert matches(~Closed(0, 1), Open(None, 0) | Open(1, None))
+        assert matches(Closed(0, 1), ~(Open(None, 0) | Open(1, None)))
+        assert matches(~OpenClosed(0, 1), OpenClosed(None, 0) | OpenClosed(1, None))
+        assert matches(OpenClosed(0, 1), ~(OpenClosed(None, 0) | OpenClosed(1, None)))
+        assert matches(~ClosedOpen(0, 1), ClosedOpen(None, 0) | ClosedOpen(1, None))
+        assert matches(ClosedOpen(0, 1), ~(ClosedOpen(None, 0) | ClosedOpen(1, None)))
+
+    def test_interval_unbound(self) -> None:
+        assert matches(~Open(None, 0), Closed(0, None))
+        assert matches(Open(None, 0), ~Closed(0, None))
+        assert matches(~Closed(None, 0), Open(0, None))
+        assert matches(Closed(None, 0), ~Open(0, None))
+        assert matches(~OpenClosed(None, 0), OpenClosed(0, None))
+        assert matches(OpenClosed(None, 0), ~OpenClosed(0, None))
+        assert matches(~ClosedOpen(None, 0), ClosedOpen(0, None))
+        assert matches(ClosedOpen(None, 0), ~ClosedOpen(0, None))
+
+
+    def test_interval_infinite(self) -> None:
+        # only Open(None, None) is the technical complement of EMPTY
+        assert matches(~Open(None, None), EMPTY)            #    match: ~(-inf ; +inf) == [;]
+        assert not matches(~Closed(None, None), EMPTY)      # no match: ~[-inf ; +inf] == (;)
+        assert not matches(~OpenClosed(None, None), EMPTY)  # no match: ~(-inf ; +inf] == (;]
+        assert not matches(~ClosedOpen(None, None), EMPTY)  # no match: ~[-inf ; +inf) == [;)
+
+        # but all other sets are the functional complements regardless
+        assert ~Open(None, None) == EMPTY
+        assert ~Closed(None, None) == EMPTY
+        assert ~OpenClosed(None, None) == EMPTY
+        assert ~ClosedOpen(None, None) == EMPTY
+
+    def test_interval_set(self) -> None:
+        raise NotImplementedError
+
 
 
 class TestIntervalRepr:
