@@ -359,6 +359,11 @@ class Interval(IntervalSet[T], Generic[T]):
     def stop(self) -> T:
         return self._stop[1]
 
+    @staticmethod
+    def or_empty(start: V, stop: V) -> "Interval[V] | Empty":
+        # abstract
+        raise NotImplementedError
+
     def __contains__(self, item: object) -> bool:
         value = (0, item, False)
         try:
@@ -445,17 +450,17 @@ class _ConcreteInterval(Interval[T], Generic[T]):
 
         self._intervals_cached = (self,)
 
-    S = TypeVar("S", bound="_ConcreteInterval")
-
-    @classmethod
-    def or_empty(cls: type[S], start: T, stop: T) -> "S | Empty":
-        return create_instance(cls._construct(start, stop, allow_empty=True), interval_type=cls)
-
 
 class Open(_ConcreteInterval[T], OpenSet[T], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
     @staticmethod
     def _sinister_template() -> tuple[bool, bool, bool, bool]:
         return False, True, False, True
+
+    @staticmethod
+    def or_empty(start: V, stop: V) -> "Open[V] | Empty":
+        return cast(
+            Open[V] | Empty, create_instance(Open._construct(start, stop, allow_empty=True), interval_type=Open)
+        )
 
 
 class Closed(_ConcreteInterval[T], ClosedSet[T], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
@@ -463,17 +468,37 @@ class Closed(_ConcreteInterval[T], ClosedSet[T], Generic[T]):  # pyright:ignore[
     def _sinister_template() -> tuple[bool, bool, bool, bool]:
         return True, False, True, False
 
+    @staticmethod
+    def or_empty(start: V, stop: V) -> "Closed[V] | Empty":
+        return cast(
+            Closed[V] | Empty, create_instance(Open._construct(start, stop, allow_empty=True), interval_type=Closed)
+        )
+
 
 class OpenClosed(_ConcreteInterval[T], OpenClosedSet[T], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
     @staticmethod
     def _sinister_template() -> tuple[bool, bool, bool, bool]:
         return True, True, True, True
 
+    @staticmethod
+    def or_empty(start: V, stop: V) -> "OpenClosed[V] | Empty":
+        return cast(
+            OpenClosed[V] | Empty,
+            create_instance(Open._construct(start, stop, allow_empty=True), interval_type=OpenClosed),
+        )
+
 
 class ClosedOpen(_ConcreteInterval[T], ClosedOpenSet[T], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
     @staticmethod
     def _sinister_template() -> tuple[bool, bool, bool, bool]:
         return False, False, False, False
+
+    @staticmethod
+    def or_empty(start: V, stop: V) -> "ClosedOpen[V] | Empty":
+        return cast(
+            ClosedOpen[V] | Empty,
+            create_instance(Open._construct(start, stop, allow_empty=True), interval_type=ClosedOpen),
+        )
 
 
 PLURAL_TO_SINGULAR = {OpenSet: Open, ClosedSet: Closed, OpenClosedSet: OpenClosed, ClosedOpenSet: ClosedOpen}

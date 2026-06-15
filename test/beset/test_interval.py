@@ -22,7 +22,7 @@ T = TypeVar("T", covariant=True, bound=Sortable | None)
 IntervalType = Open[T] | Closed[T] | ClosedOpen[T] | OpenClosed[T]
 
 
-def assert_exact_match(x: IntervalSet[Sortable | None], y: IntervalSet[Sortable | None]) -> bool:
+def assert_exact_match(x: IntervalSet[Sortable | None], y: IntervalSet[Sortable | None]) -> None:
     __tracebackhide__ = True
     if not (
         type(x) is type(y)
@@ -45,7 +45,7 @@ def assert_exact_match(x: IntervalSet[Sortable | None], y: IntervalSet[Sortable 
         fail(problem)
 
 
-def assert_not_exact_match(x: IntervalSet[Sortable | None], y: IntervalSet[Sortable | None]) -> bool:
+def assert_not_exact_match(x: IntervalSet[Sortable | None], y: IntervalSet[Sortable | None]) -> None:
     __tracebackhide__ = True
     if (
         type(x) is type(y)
@@ -668,14 +668,14 @@ class TestIntervalDifference:
 
     def test_match_intersection_of_complement(self) -> None:
         assert_exact_match(Open(0, 1) - EMPTY, Open(0, 1) & ~EMPTY)
-        assert_exact_match(Open(0, 1) - EMPTY, Open(0, 1) & ~ EMPTY)
-        assert_exact_match(Open(0, None) - EMPTY, Open(0, None) & ~ EMPTY)
-        assert_exact_match(Open(None, 0) - EMPTY, Open(None, 0) & ~ EMPTY)
-        assert_exact_match(Open(None, None) - EMPTY, Open(None, None) & ~ EMPTY)
-        assert_exact_match(EMPTY - Open(0, 1), EMPTY & ~ Open(0, 1))
-        assert_exact_match(EMPTY - Open(0, None), EMPTY & ~ Open(0, None))
-        assert_exact_match(EMPTY - Open(None, 0), EMPTY & ~ Open(None, 0))
-        assert_exact_match(EMPTY - Open(None, None), EMPTY & ~ Open(None, None))
+        assert_exact_match(Open(0, 1) - EMPTY, Open(0, 1) & ~EMPTY)
+        assert_exact_match(Open(0, None) - EMPTY, Open(0, None) & ~EMPTY)
+        assert_exact_match(Open(None, 0) - EMPTY, Open(None, 0) & ~EMPTY)
+        assert_exact_match(Open(None, None) - EMPTY, Open(None, None) & ~EMPTY)
+        assert_exact_match(EMPTY - Open(0, 1), EMPTY & ~Open(0, 1))
+        assert_exact_match(EMPTY - Open(0, None), EMPTY & ~Open(0, None))
+        assert_exact_match(EMPTY - Open(None, 0), EMPTY & ~Open(None, 0))
+        assert_exact_match(EMPTY - Open(None, None), EMPTY & ~Open(None, None))
 
 
 class TestIntervalComplement:
