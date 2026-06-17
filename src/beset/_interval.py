@@ -126,7 +126,7 @@ def create_instance(
 ) -> "IntervalSet[T]":
     cls = choose_class(interval_data, interval_type)
     obj = object().__new__(cls)
-    obj._odd, obj._left_sinister, obj._bounds, obj._right_sinister = interval_data
+    obj._odd, _, obj._bounds, _ = interval_data
     obj._post_construct()
     return obj
 
@@ -143,27 +143,21 @@ def create_singular_instance(start: Bound[T], stop: Bound[T]) -> "Interval[T]":
     if left is None:
         new_odd = True
         new_left_bound = ()
-        new_left_sinister = left_sinister
     else:
         new_odd = False
         new_left_bound = (start,)
-        new_left_sinister = right_sinister
 
     if right is None:
         new_right_bound = ()
-        new_right_sinister = right_sinister
     else:
         new_right_bound = (stop,)
-        new_right_sinister = left_sinister
 
     new_bounds = new_left_bound + new_right_bound
 
     obj = object().__new__(cls)
 
     obj._odd = new_odd
-    obj._left_sinister = new_left_sinister
     obj._bounds = new_bounds
-    obj._right_sinister = new_right_sinister
 
     obj._post_construct()
 
@@ -177,11 +171,9 @@ class IntervalMeta(type):
 
 
 class IntervalSet(Generic[T], metaclass=IntervalMeta):
-    __slots__ = ["_odd", "_left_sinister", "_bounds", "_right_sinister", "_intervals_cached"]
+    __slots__ = ["_odd", "_bounds", "_intervals_cached"]
     _odd: bool
-    _left_sinister: bool
     _bounds: tuple[Bound[T], ...]
-    _right_sinister: bool
     _intervals_cached: tuple["Interval[T]", ...] | None
 
     def __init__(self, intervals: Iterable["IntervalSet[T]"] = ()):
@@ -197,10 +189,10 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
         self._intervals_cached = None
 
     def _data(self) -> IntervalData[T]:
-        return self._odd, self._left_sinister, self._bounds, self._right_sinister
+        return self._odd, self._bounds[1][1], self._bounds, self._bounds[-2][1]
 
     def _bound_pairs(self) -> Iterable[tuple[Bound[T], Bound[T]]]:
-        bounds = chain(self._odd * ((None, self._left_sinister),), self._bounds, ((None, self._right_sinister),))
+        bounds = chain(self._odd * ((None, self._bounds[1][1]),), self._bounds, ((None, self._bounds[-1][1]),))
         for pair in batched(bounds, 2):
             if len(pair) == 2:
                 yield cast(tuple[Bound[T], Bound[T]], pair)
@@ -301,6 +293,9 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
 
 
 class OpenSet(IntervalSet[T], Generic[T]):
+    _left_sinister = True
+    _right_sinister = False
+
     def __init__(self, intervals: Iterable["Open[T]"] = ()):
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
@@ -308,21 +303,30 @@ class OpenSet(IntervalSet[T], Generic[T]):
 
 
 class ClosedSet(IntervalSet[T], Generic[T]):
+    _left_sinister = False
+    _right_sinister = True
+
     def __init__(self, intervals: Iterable["Closed[T]"] = ()):
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
         raise NotImplementedError
 
 
-class ClosedOpenSet(IntervalSet[T], Generic[T]):
-    def __init__(self, intervals: Iterable["ClosedOpen[T]"] = ()):
+class OpenClosedSet(IntervalSet[T], Generic[T]):
+    _left_sinister = True
+    _right_sinister = True
+
+    def __init__(self, intervals: Iterable["OpenClosed[T]"] = ()):
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
         raise NotImplementedError
 
 
-class OpenClosedSet(IntervalSet[T], Generic[T]):
-    def __init__(self, intervals: Iterable["OpenClosed[T]"] = ()):
+class ClosedOpenSet(IntervalSet[T], Generic[T]):
+    _left_sinister = False
+    _right_sinister = False
+
+    def __init__(self, intervals: Iterable["ClosedOpen[T]"] = ()):
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
         raise NotImplementedError
@@ -379,6 +383,9 @@ class Interval(IntervalSet[T], Generic[T]):
 
 
 class _ConcreteInterval(Interval[T], Generic[T]):
+    _left_sinister: Sinisterity
+    _right_sinister: Sinisterity
+
     def __init__(self, start: T, stop: T):
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
@@ -386,9 +393,11 @@ class _ConcreteInterval(Interval[T], Generic[T]):
 
     @classmethod
     def _construct(cls, start: V, stop: V, allow_empty: bool = False) -> IntervalData[V]:  # type:ignore[ty:invalid-method-override,unused-ignore,override]
-        far_left, left, right, far_right = cls._sinister_template()
+        far_left = right = cls._right_sinister
+        left = far_right = cls._left_sinister
 
         bounds: tuple[Bound[V], ...]
+
         if start is None:
             if stop is None:
                 left_sinister = left
@@ -427,23 +436,17 @@ class _ConcreteInterval(Interval[T], Generic[T]):
 
         return odd, left_sinister, bounds, right_sinister
 
-    @staticmethod
-    def _sinister_template() -> tuple[bool, bool, bool, bool]:
-        # abstract
-        raise NotImplementedError
-
     def _post_construct(self) -> None:
-        far_left, left, right, far_right = self._sinister_template()
         match self._odd, self._bounds:
             case True, ((stop, stop_sinister),):
-                self._start = (-1, None, left)  # type:ignore[ty:invalid-assignment,unused-ignore,assignment]
+                self._start = (-1, None, self._left_sinister)  # type:ignore[ty:invalid-assignment,unused-ignore,assignment]
                 self._stop = (0, stop, stop_sinister)
             case True, ():
-                self._start = (-1, None, left)  # type:ignore[ty:invalid-assignment,unused-ignore,assignment]
-                self._stop = (1, None, right)  # type:ignore[ty:invalid-assignment,unused-ignore,assignment]
+                self._start = (-1, None, self._left_sinister)  # type:ignore[ty:invalid-assignment,unused-ignore,assignment]
+                self._stop = (1, None, self._right_sinister)  # type:ignore[ty:invalid-assignment,unused-ignore,assignment]
             case False, ((start, start_sinister),):
                 self._start = (0, start, start_sinister)
-                self._stop = (1, None, right)  # type:ignore[ty:invalid-assignment,unused-ignore,assignment]
+                self._stop = (1, None, self._right_sinister)  # type:ignore[ty:invalid-assignment,unused-ignore,assignment]
             case False, ((start, start_sinister), (stop, stop_sinister)):
                 self._start = (0, start, start_sinister)
                 self._stop = (0, stop, stop_sinister)
@@ -453,10 +456,6 @@ class _ConcreteInterval(Interval[T], Generic[T]):
 
 class Open(_ConcreteInterval[T], OpenSet[T], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
     @staticmethod
-    def _sinister_template() -> tuple[bool, bool, bool, bool]:
-        return False, True, False, True
-
-    @staticmethod
     def or_empty(start: V, stop: V) -> "Open[V] | Empty":
         return cast(
             Open[V] | Empty, create_instance(Open._construct(start, stop, allow_empty=True), interval_type=Open)
@@ -465,10 +464,6 @@ class Open(_ConcreteInterval[T], OpenSet[T], Generic[T]):  # pyright:ignore[repo
 
 class Closed(_ConcreteInterval[T], ClosedSet[T], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
     @staticmethod
-    def _sinister_template() -> tuple[bool, bool, bool, bool]:
-        return True, False, True, False
-
-    @staticmethod
     def or_empty(start: V, stop: V) -> "Closed[V] | Empty":
         return cast(
             Closed[V] | Empty, create_instance(Open._construct(start, stop, allow_empty=True), interval_type=Closed)
@@ -476,10 +471,6 @@ class Closed(_ConcreteInterval[T], ClosedSet[T], Generic[T]):  # pyright:ignore[
 
 
 class OpenClosed(_ConcreteInterval[T], OpenClosedSet[T], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
-    @staticmethod
-    def _sinister_template() -> tuple[bool, bool, bool, bool]:
-        return True, True, True, True
-
     @staticmethod
     def or_empty(start: V, stop: V) -> "OpenClosed[V] | Empty":
         return cast(
@@ -490,10 +481,6 @@ class OpenClosed(_ConcreteInterval[T], OpenClosedSet[T], Generic[T]):  # pyright
 
 class ClosedOpen(_ConcreteInterval[T], ClosedOpenSet[T], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
     @staticmethod
-    def _sinister_template() -> tuple[bool, bool, bool, bool]:
-        return False, False, False, False
-
-    @staticmethod
     def or_empty(start: V, stop: V) -> "ClosedOpen[V] | Empty":
         return cast(
             ClosedOpen[V] | Empty,
@@ -503,15 +490,16 @@ class ClosedOpen(_ConcreteInterval[T], ClosedOpenSet[T], Generic[T]):  # pyright
 
 PLURAL_TO_SINGULAR = {OpenSet: Open, ClosedSet: Closed, OpenClosedSet: OpenClosed, ClosedOpenSet: ClosedOpen}
 
-SINISTERITY_TO_CLASS: Mapping[tuple[bool, bool], type[Interval[Any]]] = {
-    (False, False): ClosedOpen,
-    (False, True): ClosedOpen,
-    (True, False): Open,
-    (True, True): OpenClosed,
+
+SINISTERITY_TO_CLASS: Mapping[tuple[Sinisterity, Sinisterity], type[Interval[Any]]] = {
+    (cls._left_sinister, cls._left_sinister): cls for cls in [ClosedOpen, ClosedOpen, Open, OpenClosed]
 }
 
 
-class Empty(OpenSet[Never], ClosedSet[Never], OpenClosedSet[Never], ClosedOpenSet[Never]):
+class Empty(IntervalSet[Never]):
+    _left_sinister: Sinisterity
+    _right_sinister: Sinisterity
+
     def __init__(self) -> None:
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
@@ -533,4 +521,16 @@ class Empty(OpenSet[Never], ClosedSet[Never], OpenClosedSet[Never], ClosedOpenSe
         return f"{left};{right}"
 
 
-EMPTY = Empty()
+class OpenEmpty(OpenSet[Never], Empty): ...
+
+
+class ClosedEmpty(ClosedSet[Never], Empty): ...
+
+
+class OpenClosedEmpty(OpenClosedSet[Never], Empty): ...
+
+
+class ClosedOpenEmpty(ClosedOpenSet[Never], Empty): ...
+
+
+EMPTY = ClosedEmpty()

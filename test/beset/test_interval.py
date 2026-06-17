@@ -17,6 +17,7 @@ from beset import (
     OpenSet,
     Sortable,
 )
+from beset._interval import ClosedEmpty, ClosedOpenEmpty, OpenClosedEmpty, OpenEmpty
 
 T = TypeVar("T", covariant=True, bound=Sortable | None)
 IntervalType = Open[T] | Closed[T] | ClosedOpen[T] | OpenClosed[T]
@@ -24,13 +25,7 @@ IntervalType = Open[T] | Closed[T] | ClosedOpen[T] | OpenClosed[T]
 
 def assert_exact_match(x: IntervalSet[Sortable | None], y: IntervalSet[Sortable | None]) -> None:
     __tracebackhide__ = True
-    if not (
-        type(x) is type(y)
-        and x._odd == y._odd
-        and x._left_sinister == y._left_sinister
-        and x._bounds == y._bounds
-        and x._right_sinister == y._right_sinister
-    ):
+    if not (type(x) is type(y) and x._odd == y._odd and x._bounds == y._bounds):
         problem = "Intervals not an exact match!\n"
         for name, attribute in [
             ("odd", "_odd"),
@@ -47,13 +42,7 @@ def assert_exact_match(x: IntervalSet[Sortable | None], y: IntervalSet[Sortable 
 
 def assert_not_exact_match(x: IntervalSet[Sortable | None], y: IntervalSet[Sortable | None]) -> None:
     __tracebackhide__ = True
-    if (
-        type(x) is type(y)
-        and x._odd == y._odd
-        and x._left_sinister == y._left_sinister
-        and x._bounds == y._bounds
-        and x._right_sinister == y._right_sinister
-    ):
+    if type(x) is type(y) and x._odd == y._odd and x._bounds == y._bounds:
         fail("Intervals match exactly when the shouldn't!")
 
 
@@ -110,10 +99,10 @@ class TestIntervalCreation:
         assert type(ClosedOpenSet([ClosedOpen(0, 1)])) is ClosedOpen
 
     def test_interval_set_restricted_but_empty(self) -> None:
-        assert type(OpenSet()) is Empty
-        assert type(ClosedSet()) is Empty
-        assert type(OpenClosedSet()) is Empty
-        assert type(ClosedOpenSet()) is Empty
+        assert type(OpenSet()) is OpenEmpty
+        assert type(ClosedSet()) is ClosedEmpty
+        assert type(OpenClosedSet()) is OpenClosedEmpty
+        assert type(ClosedOpenSet()) is ClosedOpenEmpty
 
     def test_interval_set(self) -> None:
         assert type(IntervalSet([Open(0, 1), Closed(2, 3)])) is IntervalSet

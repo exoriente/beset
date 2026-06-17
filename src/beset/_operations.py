@@ -1,6 +1,6 @@
 from collections.abc import Iterable
 from heapq import heappop, heappush
-from itertools import compress, groupby
+from itertools import compress, groupby, starmap
 from operator import itemgetter
 from typing import TypeVar
 
@@ -77,11 +77,15 @@ def union_data(intervals: Iterable[IntervalData[T]]) -> IntervalData[T]:
     oddities, left_edges, bounds, right_edges = tuple(zip(*intervals)) or ((), (), (), ())
     active = list[bool](oddities)
     odd = any(active)
-    left_edge = all(compress(left_edges, active))
 
     new_bounds = tuple(generate_union_bounds(active, iterate_bounds(bounds)))
 
-    right_edge = any(compress(right_edges, active))
+    if len(new_bounds) >= 2:
+        left_edge = bounds[1][1]  # pyright:ignore[reportGeneralTypeIssues]
+        right_edge = bounds[-2][1]  # pyright:ignore[reportGeneralTypeIssues]
+    else:
+        left_edge = any(starmap(bool.__xor__, zip(left_edges, active)))
+        right_edge = not all(starmap(bool.__xor__, (right_edges, active)))
 
     return odd, left_edge, new_bounds, right_edge
 
