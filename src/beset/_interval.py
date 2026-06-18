@@ -52,22 +52,21 @@ def analyze_sinisterity(sinisterities: Iterable[Sinisterity]) -> Literal["co", "
 def choose_class(
     interval_data: IntervalData[T], interval_type: type["IntervalSet[T]"] | None
 ) -> type["IntervalSet[T]"]:
-    if interval_type == Empty:
-        return Empty
+    if interval_type in [OpenEmpty, ClosedEmpty, OpenClosedEmpty, ClosedOpenEmpty]:
+        return interval_type  # pyright:ignore[reportReturnType]
 
     odd, left_sinister, bounds, right_sinister = interval_data
-
-    if not odd and not bounds:
-        return Empty
 
     if interval_type in [Open, Closed, OpenClosed, ClosedOpen]:
         return interval_type  # type:ignore[return-value]
 
     if interval_type in PLURAL_TO_SINGULAR:
-        if len(bounds) + odd <= 2:
+        if 0 < len(bounds) + odd <= 2:
             return PLURAL_TO_SINGULAR[interval_type]  # type:ignore[ty:invalid-argument-type,unused-ignore,return-value]
-        else:
+        elif bounds:
             return interval_type  # pyright:ignore[reportReturnType]
+        else:
+            return PLURAL_TO_EMPTY[interval_type]  # type:ignore[ty:invalid-argument-type,unused-ignore,return-value]
 
     match odd, left_sinister, bounds, right_sinister:
         case True, False, (), False:  # [None ; None)
@@ -78,8 +77,14 @@ def choose_class(
             return Open
         case True, True, (), True:  # (None ; None]
             return OpenClosed
-        case False, _, (), _:  # Empty
-            return Empty
+        case False, False, (), False:  # [;)
+            return ClosedOpenEmpty
+        case False, False, (), True:  # (;)
+            return OpenEmpty
+        case False, True, (), False:  # [;]
+            return ClosedEmpty
+        case False, True, (), True:  # (;]
+            return OpenClosedEmpty
         case True, False, ((_, True),), _:  # [None ; x]
             return Closed
         case True, True, ((_, True),), _:  # (None ; x]
@@ -188,8 +193,14 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
     def _post_construct(self) -> None:
         self._intervals_cached = None
 
+    def _sinister_far_left(self) -> Sinisterity:
+        return self._bounds[1][1]
+
+    def _sinister_far_right(self) -> Sinisterity:
+        return self._bounds[-2][1]
+
     def _data(self) -> IntervalData[T]:
-        return self._odd, self._bounds[1][1], self._bounds, self._bounds[-2][1]
+        return self._odd, self._sinister_far_left(), self._bounds, self._sinister_far_right()
 
     def _bound_pairs(self) -> Iterable[tuple[Bound[T], Bound[T]]]:
         bounds = chain(self._odd * ((None, self._bounds[1][1]),), self._bounds, ((None, self._bounds[-1][1]),))
@@ -337,6 +348,9 @@ class Interval(IntervalSet[T], Generic[T]):
     _start: UltimateBound[T]
     _stop: UltimateBound[T]
 
+    _left_sinister: bool
+    _right_sinister: bool
+
     def __init__(self, start: T, stop: T, start_closed: bool, stop_closed: bool):
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
@@ -354,6 +368,12 @@ class Interval(IntervalSet[T], Generic[T]):
                 return OpenClosed._construct(start, stop)
             else:
                 return Open._construct(start, stop)
+
+    def _sinister_far_left(self) -> Sinisterity:
+        return self._odd and self._left_sinister or self._right_sinister
+
+    def _sinister_far_right(self) -> Sinisterity:
+        return self._odd == len(self._bounds) and self._left_sinister or self._right_sinister
 
     @property
     def start(self) -> T:
@@ -488,14 +508,6 @@ class ClosedOpen(_ConcreteInterval[T], ClosedOpenSet[T], Generic[T]):  # pyright
         )
 
 
-PLURAL_TO_SINGULAR = {OpenSet: Open, ClosedSet: Closed, OpenClosedSet: OpenClosed, ClosedOpenSet: ClosedOpen}
-
-
-SINISTERITY_TO_CLASS: Mapping[tuple[Sinisterity, Sinisterity], type[Interval[Any]]] = {
-    (cls._left_sinister, cls._left_sinister): cls for cls in [ClosedOpen, ClosedOpen, Open, OpenClosed]
-}
-
-
 class Empty(IntervalSet[Never]):
     _left_sinister: Sinisterity
     _right_sinister: Sinisterity
@@ -512,12 +524,18 @@ class Empty(IntervalSet[Never]):
     def _post_construct(self) -> None:
         self._intervals_cached = ()
 
+    def _sinister_far_left(self) -> Sinisterity:
+        return self._right_sinister
+
+    def _sinister_far_right(self) -> Sinisterity:
+        return self._left_sinister
+
     def __repr__(self) -> str:
         return f"{type(self).__name__}()"
 
     def __str__(self) -> str:
-        left = "(" if self._right_sinister else "["
-        right = "]" if self._left_sinister else ")"
+        left = "(" if self._left_sinister else "["
+        right = "]" if self._right_sinister else ")"
         return f"{left};{right}"
 
 
@@ -531,6 +549,20 @@ class OpenClosedEmpty(OpenClosedSet[Never], Empty): ...
 
 
 class ClosedOpenEmpty(ClosedOpenSet[Never], Empty): ...
+
+
+PLURAL_TO_SINGULAR = {OpenSet: Open, ClosedSet: Closed, OpenClosedSet: OpenClosed, ClosedOpenSet: ClosedOpen}
+PLURAL_TO_EMPTY = {
+    OpenSet: OpenEmpty,
+    ClosedSet: ClosedEmpty,
+    OpenClosedSet: OpenClosedEmpty,
+    ClosedOpenSet: ClosedOpenEmpty,
+}
+
+
+SINISTERITY_TO_CLASS: Mapping[tuple[Sinisterity, Sinisterity], type[Interval[Any]]] = {
+    (cls._left_sinister, cls._left_sinister): cls for cls in [ClosedOpen, ClosedOpen, Open, OpenClosed]
+}
 
 
 EMPTY = ClosedEmpty()

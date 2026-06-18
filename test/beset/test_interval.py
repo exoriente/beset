@@ -5,19 +5,21 @@ from pytest import fail, raises
 from beset import (
     EMPTY,
     Closed,
+    ClosedEmpty,
     ClosedOpen,
+    ClosedOpenEmpty,
     ClosedOpenSet,
     ClosedSet,
-    Empty,
     Interval,
     IntervalSet,
     Open,
     OpenClosed,
+    OpenClosedEmpty,
     OpenClosedSet,
+    OpenEmpty,
     OpenSet,
     Sortable,
 )
-from beset._interval import ClosedEmpty, ClosedOpenEmpty, OpenClosedEmpty, OpenEmpty
 
 T = TypeVar("T", covariant=True, bound=Sortable | None)
 IntervalType = Open[T] | Closed[T] | ClosedOpen[T] | OpenClosed[T]
@@ -48,7 +50,10 @@ def assert_not_exact_match(x: IntervalSet[Sortable | None], y: IntervalSet[Sorta
 
 class TestIntervalCreation:
     def test_empty(self) -> None:
-        assert type(Empty()) is Empty
+        assert type(OpenEmpty()) is OpenEmpty
+        assert type(ClosedEmpty()) is ClosedEmpty
+        assert type(OpenClosedEmpty()) is OpenClosedEmpty
+        assert type(ClosedOpenEmpty()) is ClosedOpenEmpty
 
     def test_interval_restricted(self, interval_class: type[IntervalType[int | None]]) -> None:
         assert type(interval_class(0, 1)) is interval_class
@@ -120,7 +125,7 @@ class TestIntervalCreation:
         assert type(IntervalSet([ClosedOpen(0, 1)])) is ClosedOpen
 
     def test_interval_set_but_empty(self) -> None:
-        assert type(IntervalSet()) is Empty
+        assert type(IntervalSet()) is ClosedOpenEmpty
 
     def test_interval_set_simplification(self) -> None:
         assert IntervalSet() == EMPTY

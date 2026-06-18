@@ -81,11 +81,11 @@ def union_data(intervals: Iterable[IntervalData[T]]) -> IntervalData[T]:
     new_bounds = tuple(generate_union_bounds(active, iterate_bounds(bounds)))
 
     if len(new_bounds) >= 2:
-        left_edge = bounds[1][1]  # pyright:ignore[reportGeneralTypeIssues]
-        right_edge = bounds[-2][1]  # pyright:ignore[reportGeneralTypeIssues]
+        left_edge = new_bounds[1][1]  # pyright:ignore[reportGeneralTypeIssues]
+        right_edge = new_bounds[-2][1]  # pyright:ignore[reportGeneralTypeIssues]
     else:
         left_edge = any(starmap(bool.__xor__, zip(left_edges, active)))
-        right_edge = not all(starmap(bool.__xor__, (right_edges, active)))
+        right_edge = not all(starmap(bool.__xor__, zip(right_edges, active)))
 
     return odd, left_edge, new_bounds, right_edge
 
