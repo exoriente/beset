@@ -29,14 +29,13 @@ def assert_exact_match(x: IntervalSet[Sortable | None], y: IntervalSet[Sortable 
     __tracebackhide__ = True
     if not (type(x) is type(y) and x._odd == y._odd and x._bounds == y._bounds):
         problem = "Intervals not an exact match!\n"
-        for name, attribute in [
-            ("odd", "_odd"),
-            ("left sinister", "_left_sinister"),
-            ("bounds", "_bounds"),
-            ("right sinister", "_right_sinister"),
+        for name, a, b in [
+            ("type", type(x), type(y)),
+            ("odd", x._odd, y._odd),
+            ("left sinister", x._left_sinister, y._left_sinister),
+            ("bounds", x._bounds, y._bounds),
+            ("right sinister", x._right_sinister, y._right_sinister),
         ]:
-            a = getattr(x, attribute)
-            b = getattr(y, attribute)
             problem += f"{name}: {a} {'==' if a == b else '!='} {b}  {'✅' if a == b else '❌'}\n"
 
         fail(problem)
@@ -799,7 +798,7 @@ class TestIntervalStr:
         assert str(ClosedOpen(None, None)) == "[-inf ; +inf)"
 
     def test_interval_set(self) -> None:
-        assert str(IntervalSet()) == "[;]"
+        assert str(IntervalSet()) == "[;)"
         assert str(IntervalSet([Open(0, 1)])) == "(0 ; 1)"
         assert str(IntervalSet([Open(0, 1), Closed(2, 3)])) == "(0 ; 1) | [2 ; 3]"
         assert str(IntervalSet([Open(0, 1), Closed(2, 3), ClosedOpen(4, 5)])) == "(0 ; 1) | [2 ; 3] | [4 ; 5)"

@@ -58,7 +58,10 @@ def choose_class(
     odd, left_sinister, bounds, right_sinister = interval_data
 
     if interval_type in [Open, Closed, OpenClosed, ClosedOpen]:
-        return interval_type  # type:ignore[return-value]
+        if odd or bounds:
+            return interval_type  # type:ignore[return-value]
+        else:
+            return SINGULAR_TO_EMPTY[interval_type]  # type:ignore[return-value]
 
     if interval_type in PLURAL_TO_SINGULAR:
         if 0 < len(bounds) + odd <= 2:
@@ -370,10 +373,11 @@ class Interval(IntervalSet[T], Generic[T]):
                 return Open._construct(start, stop)
 
     def _sinister_far_left(self) -> Sinisterity:
-        return self._odd and self._left_sinister or self._right_sinister
+        return self._odd and self._left_sinister or not self._odd and self._right_sinister
 
     def _sinister_far_right(self) -> Sinisterity:
-        return self._odd == len(self._bounds) and self._left_sinister or self._right_sinister
+        right_inactive = self._odd == len(self._bounds)
+        return right_inactive and self._left_sinister or not right_inactive and self._right_sinister
 
     @property
     def start(self) -> T:
@@ -486,7 +490,7 @@ class Closed(_ConcreteInterval[T], ClosedSet[T], Generic[T]):  # pyright:ignore[
     @staticmethod
     def or_empty(start: V, stop: V) -> "Closed[V] | Empty":
         return cast(
-            Closed[V] | Empty, create_instance(Open._construct(start, stop, allow_empty=True), interval_type=Closed)
+            Closed[V] | Empty, create_instance(Closed._construct(start, stop, allow_empty=True), interval_type=Closed)
         )
 
 
@@ -495,7 +499,7 @@ class OpenClosed(_ConcreteInterval[T], OpenClosedSet[T], Generic[T]):  # pyright
     def or_empty(start: V, stop: V) -> "OpenClosed[V] | Empty":
         return cast(
             OpenClosed[V] | Empty,
-            create_instance(Open._construct(start, stop, allow_empty=True), interval_type=OpenClosed),
+            create_instance(OpenClosed._construct(start, stop, allow_empty=True), interval_type=OpenClosed),
         )
 
 
@@ -504,7 +508,7 @@ class ClosedOpen(_ConcreteInterval[T], ClosedOpenSet[T], Generic[T]):  # pyright
     def or_empty(start: V, stop: V) -> "ClosedOpen[V] | Empty":
         return cast(
             ClosedOpen[V] | Empty,
-            create_instance(Open._construct(start, stop, allow_empty=True), interval_type=ClosedOpen),
+            create_instance(ClosedOpen._construct(start, stop, allow_empty=True), interval_type=ClosedOpen),
         )
 
 
@@ -558,10 +562,16 @@ PLURAL_TO_EMPTY = {
     OpenClosedSet: OpenClosedEmpty,
     ClosedOpenSet: ClosedOpenEmpty,
 }
+SINGULAR_TO_EMPTY = {
+    Open: OpenEmpty,
+    Closed: ClosedEmpty,
+    OpenClosed: OpenClosedEmpty,
+    ClosedOpen: ClosedOpenEmpty
+}
 
 
 SINISTERITY_TO_CLASS: Mapping[tuple[Sinisterity, Sinisterity], type[Interval[Any]]] = {
-    (cls._left_sinister, cls._left_sinister): cls for cls in [ClosedOpen, ClosedOpen, Open, OpenClosed]
+    (cls._left_sinister, cls._right_sinister): cls for cls in [Open, Closed, OpenClosed, ClosedOpen]
 }
 
 
