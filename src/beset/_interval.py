@@ -268,6 +268,14 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
     def __invert__(self) -> "IntervalSet[T | None]":
         return create_instance(complement_data(self._data()))  # type:ignore[ty:invalid-argument-type,unused-ignore,type-var]
 
+    def __getitem__(self, index_or_slice: int | slice, /) -> "Interval[T] | IntervalSet[T]":
+        match index_or_slice:
+            case int() as i:
+                return self.intervals[i]
+            case slice() as s:
+
+
+
     def __repr__(self) -> str:
         contents = ", ".join(bounds_to_repr(a, b) for a, b in self._bound_pairs())
         return f"{type(self).__name__}([{contents}])"
