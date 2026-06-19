@@ -276,6 +276,7 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
 
 
 
+
     def __repr__(self) -> str:
         contents = ", ".join(bounds_to_repr(a, b) for a, b in self._bound_pairs())
         return f"{type(self).__name__}([{contents}])"
