@@ -273,6 +273,11 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
             case int() as i:
                 return self.intervals[i]
             case slice() as s:
+                start = len(self) + s.start if s.start < 0 else s.start
+                stop = len(self) + s.stop if s.stop < 0 else s.stop
+                new_bounds = tuple(chain.from_iterable(
+                    (self._bounds[i * 2], self._bounds[i * 2 + 1]) for i in range(start, stop, s.step)
+                ))
 
 
 
