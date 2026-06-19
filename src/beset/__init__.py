@@ -1,5 +1,6 @@
 from beset._interval import (
     EMPTY,
+    UNBOUNDED,
     Closed,
     ClosedOpen,
     ClosedOpenSet,
@@ -7,10 +8,15 @@ from beset._interval import (
     Empty,
     Interval,
     IntervalSet,
+    LeftClosed,
+    LeftOpen,
     Open,
     OpenClosed,
     OpenClosedSet,
     OpenSet,
+    RightClosed,
+    RightOpen,
+    Unbounded,
 )
 from beset._protocol import Sortable
 
@@ -20,12 +26,18 @@ __all__ = [
     "OpenSet",
     "ClosedSet",
     "OpenClosedSet",
-    "ClosedOpen",
     "ClosedOpenSet",
     "Interval",
     "Open",
     "Closed",
     "OpenClosed",
+    "ClosedOpen",
+    "LeftOpen",
+    "RightOpen",
+    "LeftClosed",
+    "RightClosed",
+    "Unbounded",
     "Empty",
+    "UNBOUNDED",
     "EMPTY",
 ]

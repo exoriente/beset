@@ -52,59 +52,43 @@ def analyze_sinisterity(sinisterities: Iterable[Sinisterity]) -> Literal["co", "
 def choose_class(
     interval_data: IntervalData[T], interval_type: type["IntervalSet[T]"] | None
 ) -> type["IntervalSet[T]"]:
-    if interval_type == Empty:
-        return Empty
+    if interval_type is not None and interval_type is not IntervalSet:
+        if interval_type in [Empty, Unbounded]:
+            return cast(type["IntervalSet[T]"], interval_type)
 
-    odd, left_sinister, bounds, right_sinister = interval_data
+        odd, bounds = interval_data
 
-    if not odd and not bounds:
-        return Empty
+        if not odd and len(bounds) == 2 and interval_type in [Open, Closed, OpenClosed, ClosedOpen]:
+            return interval_type  # type:ignore[return-value]
 
-    if interval_type in [Open, Closed, OpenClosed, ClosedOpen]:
-        return interval_type  # type:ignore[return-value]
+        if len(bounds) + odd > 2 and interval_type in [OpenSet, ClosedSet, OpenClosedSet, ClosedOpenSet]:
+            return interval_type
 
-    if interval_type in PLURAL_TO_SINGULAR:
-        if len(bounds) + odd <= 2:
-            return PLURAL_TO_SINGULAR[interval_type]  # type:ignore[ty:invalid-argument-type,unused-ignore,return-value]
-        else:
-            return interval_type  # pyright:ignore[reportReturnType]
+        if len(bounds) == 1 and interval_type in [LeftOpen, LeftClosed, RightOpen, RightClosed]:
+            return interval_type  # type:ignore[return-value]
 
-    match odd, left_sinister, bounds, right_sinister:
-        case True, False, (), False:  # [None ; None)
-            return ClosedOpen
-        case True, False, (), True:  # [None ; None]
-            return Closed
-        case True, True, (), False:  # (None ; None)
-            return Open
-        case True, True, (), True:  # (None ; None]
-            return OpenClosed
-        case False, _, (), _:  # Empty
+    match interval_data:
+        case False, ():  # <;>
             return Empty
-        case True, False, ((_, True),), _:  # [None ; x]
-            return Closed
-        case True, True, ((_, True),), _:  # (None ; x]
-            return OpenClosed
-        case True, False, ((_, False),), _:  # [None ; x)
+        case True, ():  # <-inf ; +inf>
+            return cast(type["IntervalSet[T]"], Unbounded)
+        case True, ((_, True),):  # <-inf ; x]
+            return cast(type["IntervalSet[T]"], RightClosed)
+        case True, ((_, False),):  # <-inf ; x)
+            return cast(type["IntervalSet[T]"], RightOpen)
+        case False, ((_, True),):  # (x ; +inf>
+            return cast(type["IntervalSet[T]"], LeftOpen)
+        case False, ((_, False),):  # [x ; +inf>
+            return cast(type["IntervalSet[T]"], LeftClosed)
+        case False, ((_, False), (_, False)):  # [x ; y)
             return ClosedOpen
-        case True, True, ((_, False),), _:  # [None ; x)
+        case False, ((_, True), (_, False)):  # (x ; y)
             return Open
-        case False, _, ((_, True),), False:  # (x ; None)
-            return Open
-        case False, _, ((_, False),), False:  # [x ; None)
-            return ClosedOpen
-        case False, _, ((_, True),), True:  # (x ; None]
-            return OpenClosed
-        case False, _, ((_, False),), True:  # [x ; None]
+        case False, ((_, False), (_, True)):  # [x ; y]
             return Closed
-        case False, _, ((_, False), (_, False)), _:  # [x ; y)
-            return ClosedOpen
-        case False, _, ((_, True), (_, False)), _:  # (x ; y)
-            return Open
-        case False, _, ((_, False), (_, True)), _:  # [x ; y]
-            return Closed
-        case False, _, ((_, True), (_, True)), _:  # (x ; y]
+        case False, ((_, True), (_, True)):  # (x ; y]
             return OpenClosed
-        case odd, _, bounds, _:
+        case odd, bounds:
             match analyze_sinisterity(map(itemgetter(1), bounds)):
                 case "co":
                     return ClosedOpenSet
@@ -126,7 +110,7 @@ def create_instance(
 ) -> "IntervalSet[T]":
     cls = choose_class(interval_data, interval_type)
     obj = object().__new__(cls)
-    obj._odd, obj._left_sinister, obj._bounds, obj._right_sinister = interval_data
+    obj._odd, obj._bounds = interval_data
     obj._post_construct()
     return obj
 
@@ -143,27 +127,21 @@ def create_singular_instance(start: Bound[T], stop: Bound[T]) -> "Interval[T]":
     if left is None:
         new_odd = True
         new_left_bound = ()
-        new_left_sinister = left_sinister
     else:
         new_odd = False
         new_left_bound = (start,)
-        new_left_sinister = right_sinister
 
     if right is None:
         new_right_bound = ()
-        new_right_sinister = right_sinister
     else:
         new_right_bound = (stop,)
-        new_right_sinister = left_sinister
 
     new_bounds = new_left_bound + new_right_bound
 
     obj = object().__new__(cls)
 
     obj._odd = new_odd
-    obj._left_sinister = new_left_sinister
     obj._bounds = new_bounds
-    obj._right_sinister = new_right_sinister
 
     obj._post_construct()
 
@@ -171,17 +149,15 @@ def create_singular_instance(start: Bound[T], stop: Bound[T]) -> "Interval[T]":
 
 
 class IntervalMeta(type):
-    def __call__(cls: type["IntervalSet[T]"] | type["Empty"], *args, **kwargs):  # type:ignore[no-untyped-def,misc]
+    def __call__(cls: type["IntervalSet[T]"], *args, **kwargs):  # type:ignore[no-untyped-def,misc]
         interval_data = cls._construct(*args, **kwargs)
         return create_instance(interval_data, cls)
 
 
 class IntervalSet(Generic[T], metaclass=IntervalMeta):
-    __slots__ = ["_odd", "_left_sinister", "_bounds", "_right_sinister", "_intervals_cached"]
+    __slots__ = ["_odd", "_bounds", "_intervals_cached"]
     _odd: bool
-    _left_sinister: bool
     _bounds: tuple[Bound[T], ...]
-    _right_sinister: bool
     _intervals_cached: tuple["Interval[T]", ...] | None
 
     def __init__(self, intervals: Iterable["IntervalSet[T]"] = ()):
@@ -197,10 +173,10 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
         self._intervals_cached = None
 
     def _data(self) -> IntervalData[T]:
-        return self._odd, self._left_sinister, self._bounds, self._right_sinister
+        return self._odd, self._bounds
 
     def _bound_pairs(self) -> Iterable[tuple[Bound[T], Bound[T]]]:
-        bounds = chain(self._odd * ((None, self._left_sinister),), self._bounds, ((None, self._right_sinister),))
+        bounds = chain(self._odd * ((None, True),), self._bounds, ((None, False),))
         for pair in batched(bounds, 2):
             if len(pair) == 2:
                 yield cast(tuple[Bound[T], Bound[T]], pair)
@@ -301,6 +277,9 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
 
 
 class OpenSet(IntervalSet[T], Generic[T]):
+    _left_sinister = True
+    _right_sinister = False
+
     def __init__(self, intervals: Iterable["Open[T]"] = ()):
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
@@ -308,6 +287,9 @@ class OpenSet(IntervalSet[T], Generic[T]):
 
 
 class ClosedSet(IntervalSet[T], Generic[T]):
+    _left_sinister = False
+    _right_sinister = True
+
     def __init__(self, intervals: Iterable["Closed[T]"] = ()):
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
@@ -315,6 +297,9 @@ class ClosedSet(IntervalSet[T], Generic[T]):
 
 
 class ClosedOpenSet(IntervalSet[T], Generic[T]):
+    _left_sinister = False
+    _right_sinister = False
+
     def __init__(self, intervals: Iterable["ClosedOpen[T]"] = ()):
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
@@ -322,6 +307,9 @@ class ClosedOpenSet(IntervalSet[T], Generic[T]):
 
 
 class OpenClosedSet(IntervalSet[T], Generic[T]):
+    _left_sinister = True
+    _right_sinister = True
+
     def __init__(self, intervals: Iterable["OpenClosed[T]"] = ()):
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
@@ -329,6 +317,8 @@ class OpenClosedSet(IntervalSet[T], Generic[T]):
 
 
 class Interval(IntervalSet[T], Generic[T]):
+    _left_sinister: bool
+    _right_sinister: bool
     __slots__ = ["_start", "_stop"]
     _start: UltimateBound[T]
     _stop: UltimateBound[T]
@@ -386,64 +376,44 @@ class _ConcreteInterval(Interval[T], Generic[T]):
 
     @classmethod
     def _construct(cls, start: V, stop: V, allow_empty: bool = False) -> IntervalData[V]:  # type:ignore[ty:invalid-method-override,unused-ignore,override]
-        far_left, left, right, far_right = cls._sinister_template()
-
         bounds: tuple[Bound[V], ...]
         if start is None:
             if stop is None:
-                left_sinister = left
-                right_sinister = right
-
                 odd = True
                 bounds = ()
             else:
-                left_sinister = left
-                right_sinister = far_right
-
                 odd = True
-                bounds = ((stop, right),)
+                bounds = ((stop, cls._right_sinister),)
         else:
             if stop is None:
-                left_sinister = far_left
-                right_sinister = right
-
                 odd = False
-                bounds = ((start, left),)
+                bounds = ((start, cls._left_sinister),)
             else:
-                lower_bound = (start, left)
-                upper_bound = (stop, right)
+                lower_bound = (start, cls._left_sinister)
+                upper_bound = (stop, cls._right_sinister)
 
                 if not lower_bound < upper_bound:  # empty
                     if allow_empty:
-                        return False, right, (), left
+                        return False, ()
                     else:
                         raise ValueError("Empty interval! Start must be before stop.")
                 else:
-                    left_sinister = far_left
-                    right_sinister = far_right
-
                     odd = False
                     bounds = (lower_bound, upper_bound)
 
-        return odd, left_sinister, bounds, right_sinister
-
-    @staticmethod
-    def _sinister_template() -> tuple[bool, bool, bool, bool]:
-        # abstract
-        raise NotImplementedError
+        return odd, bounds
 
     def _post_construct(self) -> None:
-        far_left, left, right, far_right = self._sinister_template()
         match self._odd, self._bounds:
             case True, ((stop, stop_sinister),):
-                self._start = (-1, None, left)  # type:ignore[ty:invalid-assignment,unused-ignore,assignment]
+                self._start = (-1, None, True)  # type:ignore[ty:invalid-assignment,unused-ignore,assignment]
                 self._stop = (0, stop, stop_sinister)
             case True, ():
-                self._start = (-1, None, left)  # type:ignore[ty:invalid-assignment,unused-ignore,assignment]
-                self._stop = (1, None, right)  # type:ignore[ty:invalid-assignment,unused-ignore,assignment]
+                self._start = (-1, None, True)  # type:ignore[ty:invalid-assignment,unused-ignore,assignment]
+                self._stop = (1, None, False)  # type:ignore[ty:invalid-assignment,unused-ignore,assignment]
             case False, ((start, start_sinister),):
                 self._start = (0, start, start_sinister)
-                self._stop = (1, None, right)  # type:ignore[ty:invalid-assignment,unused-ignore,assignment]
+                self._stop = (1, None, False)  # type:ignore[ty:invalid-assignment,unused-ignore,assignment]
             case False, ((start, start_sinister), (stop, stop_sinister)):
                 self._start = (0, start, start_sinister)
                 self._stop = (0, stop, stop_sinister)
@@ -453,10 +423,6 @@ class _ConcreteInterval(Interval[T], Generic[T]):
 
 class Open(_ConcreteInterval[T], OpenSet[T], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
     @staticmethod
-    def _sinister_template() -> tuple[bool, bool, bool, bool]:
-        return False, True, False, True
-
-    @staticmethod
     def or_empty(start: V, stop: V) -> "Open[V] | Empty":
         return cast(
             Open[V] | Empty, create_instance(Open._construct(start, stop, allow_empty=True), interval_type=Open)
@@ -465,40 +431,124 @@ class Open(_ConcreteInterval[T], OpenSet[T], Generic[T]):  # pyright:ignore[repo
 
 class Closed(_ConcreteInterval[T], ClosedSet[T], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
     @staticmethod
-    def _sinister_template() -> tuple[bool, bool, bool, bool]:
-        return True, False, True, False
-
-    @staticmethod
     def or_empty(start: V, stop: V) -> "Closed[V] | Empty":
         return cast(
-            Closed[V] | Empty, create_instance(Open._construct(start, stop, allow_empty=True), interval_type=Closed)
+            Closed[V] | Empty, create_instance(Closed._construct(start, stop, allow_empty=True), interval_type=Closed)
         )
 
 
 class OpenClosed(_ConcreteInterval[T], OpenClosedSet[T], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
     @staticmethod
-    def _sinister_template() -> tuple[bool, bool, bool, bool]:
-        return True, True, True, True
-
-    @staticmethod
     def or_empty(start: V, stop: V) -> "OpenClosed[V] | Empty":
         return cast(
             OpenClosed[V] | Empty,
-            create_instance(Open._construct(start, stop, allow_empty=True), interval_type=OpenClosed),
+            create_instance(OpenClosed._construct(start, stop, allow_empty=True), interval_type=OpenClosed),
         )
 
 
 class ClosedOpen(_ConcreteInterval[T], ClosedOpenSet[T], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
     @staticmethod
-    def _sinister_template() -> tuple[bool, bool, bool, bool]:
-        return False, False, False, False
-
-    @staticmethod
     def or_empty(start: V, stop: V) -> "ClosedOpen[V] | Empty":
         return cast(
             ClosedOpen[V] | Empty,
-            create_instance(Open._construct(start, stop, allow_empty=True), interval_type=ClosedOpen),
+            create_instance(ClosedOpen._construct(start, stop, allow_empty=True), interval_type=ClosedOpen),
         )
+
+
+class _LeftBounded(_ConcreteInterval[T], Generic[T]):
+    # abstract
+
+    def __init__(self, start: T) -> None:
+        # not in use, metaclass handles initialization
+        # signature provided for IDE detection
+        raise NotImplementedError
+
+    @classmethod
+    def _construct(cls, start: V) -> IntervalData[V]:  # type:ignore[ty:invalid-method-override,unused-ignore,override]
+        if start is None:
+            return True, ()
+        else:
+            return False, ((start, cls._left_sinister),)
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}({self._bounds[0][0]!r})"
+
+
+class _RightBounded(_ConcreteInterval[T], Generic[T]):
+    # abstract
+
+    def __init__(self, stop: T) -> None:
+        # not in use, metaclass handles initialization
+        # signature provided for IDE detection
+        raise NotImplementedError
+
+    @classmethod
+    def _construct(cls, stop: V) -> IntervalData[V]:  # type:ignore[ty:invalid-method-override,unused-ignore,override]
+        if stop is None:
+            return True, ()
+        else:
+            return True, ((stop, cls._right_sinister),)
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}({self._bounds[0][0]!r})"
+
+
+class LeftOpen(_LeftBounded[T | None], Open[T | None], OpenClosed[T | None], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
+    @staticmethod
+    def or_empty(start: Never, stop: Never) -> Never:  # type:ignore[override,unused-ignore]
+        raise NotImplementedError
+
+
+class RightOpen(_RightBounded[T | None], Open[T | None], ClosedOpen[T | None], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
+    @staticmethod
+    def or_empty(start: Never, stop: Never) -> Never:  # type:ignore[override,unused-ignore]
+        raise NotImplementedError
+
+
+class LeftClosed(_LeftBounded[T | None], Closed[T | None], ClosedOpen[T | None], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
+    @staticmethod
+    def or_empty(start: Never, stop: Never) -> Never:  # type:ignore[override,unused-ignore]
+        raise NotImplementedError
+
+
+class RightClosed(_RightBounded[T | None], Closed[T | None], OpenClosed[T | None], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
+    @staticmethod
+    def or_empty(start: Never, stop: Never) -> Never:  # type:ignore[override,unused-ignore]
+        raise NotImplementedError
+
+
+class Unbounded(LeftOpen[None], RightOpen[None], LeftClosed[None], RightClosed[None]):  # type:ignore[misc,unused-ignore]
+    def __init__(self) -> None:
+        # not in use, metaclass handles initialization
+        # signature provided for IDE detection
+        raise NotImplementedError
+
+    @classmethod
+    def _construct(cls) -> IntervalData[None]:  # type:ignore[ty:invalid-method-override,unused-ignore,override]
+        return True, ()
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}()"
+
+
+class Empty(OpenSet[Never], ClosedSet[Never], OpenClosedSet[Never], ClosedOpenSet[Never]):
+    def __init__(self) -> None:
+        # not in use, metaclass handles initialization
+        # signature provided for IDE detection
+        raise NotImplementedError
+
+    @classmethod
+    def _construct(cls) -> IntervalData[Never]:  # type:ignore[ty:invalid-method-override,unused-ignore,override]
+        return False, ()
+
+    def _post_construct(self) -> None:
+        self._intervals_cached = ()
+
+    def __repr__(self) -> str:
+        return f"{type(self).__name__}()"
+
+    def __str__(self) -> str:
+        return "⟨;⟩"
 
 
 PLURAL_TO_SINGULAR = {OpenSet: Open, ClosedSet: Closed, OpenClosedSet: OpenClosed, ClosedOpenSet: ClosedOpen}
@@ -510,27 +560,5 @@ SINISTERITY_TO_CLASS: Mapping[tuple[bool, bool], type[Interval[Any]]] = {
     (True, True): OpenClosed,
 }
 
-
-class Empty(OpenSet[Never], ClosedSet[Never], OpenClosedSet[Never], ClosedOpenSet[Never]):
-    def __init__(self) -> None:
-        # not in use, metaclass handles initialization
-        # signature provided for IDE detection
-        raise NotImplementedError
-
-    @classmethod
-    def _construct(cls) -> IntervalData[Never]:  # type:ignore[ty:invalid-method-override,unused-ignore,override]
-        return False, True, (), False
-
-    def _post_construct(self) -> None:
-        self._intervals_cached = ()
-
-    def __repr__(self) -> str:
-        return f"{type(self).__name__}()"
-
-    def __str__(self) -> str:
-        left = "(" if self._right_sinister else "["
-        right = "]" if self._left_sinister else ")"
-        return f"{left};{right}"
-
-
+UNBOUNDED = Unbounded()
 EMPTY = Empty()

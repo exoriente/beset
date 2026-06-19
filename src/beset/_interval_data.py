@@ -6,5 +6,5 @@ Oddity = bool
 Sinisterity = bool
 
 Bound = tuple[T, Sinisterity]
-IntervalData = tuple[Oddity, Sinisterity, tuple[tuple[T, Sinisterity], ...], Sinisterity]
+IntervalData = tuple[Oddity, tuple[tuple[T, Sinisterity], ...]]
 UltimateBound = tuple[int, T, Sinisterity]

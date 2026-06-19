@@ -4,6 +4,7 @@ from pytest import fail, raises
 
 from beset import (
     EMPTY,
+    UNBOUNDED,
     Closed,
     ClosedOpen,
     ClosedOpenSet,
@@ -11,11 +12,16 @@ from beset import (
     Empty,
     Interval,
     IntervalSet,
+    LeftClosed,
+    LeftOpen,
     Open,
     OpenClosed,
     OpenClosedSet,
     OpenSet,
+    RightClosed,
+    RightOpen,
     Sortable,
+    Unbounded,
 )
 
 T = TypeVar("T", covariant=True, bound=Sortable | None)
@@ -24,22 +30,13 @@ IntervalType = Open[T] | Closed[T] | ClosedOpen[T] | OpenClosed[T]
 
 def assert_exact_match(x: IntervalSet[Sortable | None], y: IntervalSet[Sortable | None]) -> None:
     __tracebackhide__ = True
-    if not (
-        type(x) is type(y)
-        and x._odd == y._odd
-        and x._left_sinister == y._left_sinister
-        and x._bounds == y._bounds
-        and x._right_sinister == y._right_sinister
-    ):
+    if not (type(x) is type(y) and x._odd == y._odd and x._bounds == y._bounds):
         problem = "Intervals not an exact match!\n"
-        for name, attribute in [
-            ("odd", "_odd"),
-            ("left sinister", "_left_sinister"),
-            ("bounds", "_bounds"),
-            ("right sinister", "_right_sinister"),
+        for name, a, b in [
+            ("type", type(x), type(y)),
+            ("odd", x._odd, y._odd),
+            ("bounds", x._bounds, y._bounds),
         ]:
-            a = getattr(x, attribute)
-            b = getattr(y, attribute)
             problem += f"{name}: {a} {'==' if a == b else '!='} {b}  {'✅' if a == b else '❌'}\n"
 
         fail(problem)
@@ -47,13 +44,7 @@ def assert_exact_match(x: IntervalSet[Sortable | None], y: IntervalSet[Sortable 
 
 def assert_not_exact_match(x: IntervalSet[Sortable | None], y: IntervalSet[Sortable | None]) -> None:
     __tracebackhide__ = True
-    if (
-        type(x) is type(y)
-        and x._odd == y._odd
-        and x._left_sinister == y._left_sinister
-        and x._bounds == y._bounds
-        and x._right_sinister == y._right_sinister
-    ):
+    if type(x) is type(y) and x._odd == y._odd and x._bounds == y._bounds:
         fail("Intervals match exactly when the shouldn't!")
 
 
@@ -61,11 +52,11 @@ class TestIntervalCreation:
     def test_empty(self) -> None:
         assert type(Empty()) is Empty
 
-    def test_interval_restricted(self, interval_class: type[IntervalType[int | None]]) -> None:
-        assert type(interval_class(0, 1)) is interval_class
-        assert type(interval_class(0, None)) is interval_class
-        assert type(interval_class(None, 0)) is interval_class
-        assert type(interval_class(None, None)) is interval_class
+    def test_interval_restricted(self) -> None:
+        assert type(Open(0, 1)) is Open
+        assert type(Open(0, None)) is LeftOpen
+        assert type(Open(None, 0)) is RightOpen
+        assert type(Open(None, None)) is Unbounded
 
     def test_interval_restricted_but_empty(self, interval_class: type[IntervalType[int]]) -> None:
         with raises(ValueError):
@@ -86,6 +77,21 @@ class TestIntervalCreation:
         assert type(Interval(0, 1, False, True)) is OpenClosed
         assert type(Interval(0, 1, True, False)) is ClosedOpen
         assert type(Interval(0, 1, True, True)) is Closed
+
+        assert type(Interval(None, 1, False, False)) is RightOpen
+        assert type(Interval(None, 1, False, True)) is RightClosed
+        assert type(Interval(None, 1, True, False)) is RightOpen
+        assert type(Interval(None, 1, True, True)) is RightClosed
+
+        assert type(Interval(0, None, False, False)) is LeftOpen
+        assert type(Interval(0, None, False, True)) is LeftOpen
+        assert type(Interval(0, None, True, False)) is LeftClosed
+        assert type(Interval(0, None, True, True)) is LeftClosed
+
+        assert type(Interval(None, None, False, False)) is Unbounded
+        assert type(Interval(None, None, False, True)) is Unbounded
+        assert type(Interval(None, None, True, False)) is Unbounded
+        assert type(Interval(None, None, True, True)) is Unbounded
 
     def test_interval_but_empty(self) -> None:
         with raises(ValueError):
@@ -139,9 +145,9 @@ class TestIntervalCreation:
         assert IntervalSet([EMPTY, EMPTY, EMPTY]) == EMPTY
         assert IntervalSet([Open(0, 4), EMPTY]) == Open(0, 4)
         assert IntervalSet([Open(0, 4), Closed(2, 6)]) == OpenClosed(0, 6)
-        assert IntervalSet([Open(None, 4), Closed(2, 6)]) == OpenClosed(None, 6)
+        assert IntervalSet([Open(None, 4), Closed(2, 6)]) == RightClosed(6)
         assert IntervalSet([Open(None, 4), Closed(2, 6), ClosedOpen(7, 9)]) == IntervalSet(
-            [OpenClosed(None, 6), ClosedOpen(7, 9)]
+            [RightClosed(6), ClosedOpen(7, 9)]
         )
         assert_exact_match(
             IntervalSet([Open(None, 4), Closed(2, 6), OpenClosed(7, 9)]),
@@ -211,6 +217,39 @@ class TestIntervalCovariance:
         assert start_4 is None
         stop_4: int | None = ClosedOpen(None, 2).stop
         assert stop_4 == 2
+
+    def test_half_bounded_interval(self) -> None:
+        """
+        type checkers should be satisfied that intervals with "missing" bounds are allowed
+        as bounded intervals with None
+        """
+        open_left: Open[int | None] = LeftOpen(0)
+        assert open_left
+        open_right: Open[int | None] = RightOpen(0)
+        assert open_right
+        open_all: Open[int | None] = UNBOUNDED
+        assert open_all
+
+        closed_left: Closed[int | None] = LeftClosed(0)
+        assert closed_left
+        closed_right: Closed[int | None] = RightClosed(0)
+        assert closed_right
+        closed_all: Closed[int | None] = UNBOUNDED
+        assert closed_all
+
+        open_closed_left: OpenClosed[int | None] = LeftOpen(0)
+        assert open_closed_left
+        open_closed_right: OpenClosed[int | None] = RightClosed(0)
+        assert open_closed_right
+        open_closed_all: OpenClosed[int | None] = UNBOUNDED
+        assert open_closed_all
+
+        closed_open_left: ClosedOpen[int | None] = RightOpen(0)
+        assert closed_open_left
+        closed_open_right: ClosedOpen[int | None] = RightOpen(0)
+        assert closed_open_right
+        closed_open_all: ClosedOpen[int | None] = UNBOUNDED
+        assert closed_open_all
 
     def test_interval_set(self) -> None:
         """
@@ -704,17 +743,8 @@ class TestIntervalComplement:
         assert_exact_match(ClosedOpen(None, 0), ~ClosedOpen(0, None))
 
     def test_interval_infinite(self) -> None:
-        # only Open(None, None) is the technical complement of EMPTY
-        assert_exact_match(~Open(None, None), EMPTY)  #              match: ~(-inf ; +inf) == [;]
-        assert_not_exact_match(~Closed(None, None), EMPTY)  #     no match: ~[-inf ; +inf] == (;)
-        assert_not_exact_match(~OpenClosed(None, None), EMPTY)  # no match: ~(-inf ; +inf] == (;]
-        assert_not_exact_match(~ClosedOpen(None, None), EMPTY)  # no match: ~[-inf ; +inf) == [;)
-
-        # but all other sets are the functional complements regardless
-        assert ~Open(None, None) == EMPTY
-        assert ~Closed(None, None) == EMPTY
-        assert ~OpenClosed(None, None) == EMPTY
-        assert ~ClosedOpen(None, None) == EMPTY
+        assert_exact_match(~UNBOUNDED, EMPTY)
+        assert_exact_match(~EMPTY, UNBOUNDED)
 
     def test_interval_set(self) -> None:
         assert ~(Open(0, 1) | Open(2, 3) | Open(4, 5)) == Closed(None, 0) | Closed(1, 2) | Closed(3, 4) | Closed(
@@ -749,19 +779,14 @@ class TestIntervalRepr:
         assert repr(OpenClosed(0, 1)) == "OpenClosed(0, 1)"
         assert repr(ClosedOpen(0, 1)) == "ClosedOpen(0, 1)"
 
+    def test_interval_half_bounded(self) -> None:
+        assert repr(LeftOpen(1)) == "LeftOpen(1)"
+        assert repr(LeftClosed(1)) == "LeftClosed(1)"
+        assert repr(RightOpen(1)) == "RightOpen(1)"
+        assert repr(RightClosed(1)) == "RightClosed(1)"
+
     def test_interval_unbounded(self) -> None:
-        assert repr(Open(None, 1)) == "Open(None, 1)"
-        assert repr(Closed(None, 1)) == "Closed(None, 1)"
-        assert repr(OpenClosed(None, 1)) == "OpenClosed(None, 1)"
-        assert repr(ClosedOpen(None, 1)) == "ClosedOpen(None, 1)"
-        assert repr(Open(0, None)) == "Open(0, None)"
-        assert repr(Closed(0, None)) == "Closed(0, None)"
-        assert repr(OpenClosed(0, None)) == "OpenClosed(0, None)"
-        assert repr(ClosedOpen(0, None)) == "ClosedOpen(0, None)"
-        assert repr(Open(None, None)) == "Open(None, None)"
-        assert repr(Closed(None, None)) == "Closed(None, None)"
-        assert repr(OpenClosed(None, None)) == "OpenClosed(None, None)"
-        assert repr(ClosedOpen(None, None)) == "ClosedOpen(None, None)"
+        assert repr(Unbounded()) == "Unbounded()"
 
     def test_interval_set(self) -> None:
         assert (
@@ -772,17 +797,17 @@ class TestIntervalRepr:
     def test_interval_set_unbound(self) -> None:
         assert (
             repr(IntervalSet([ClosedOpen(None, 1), ClosedOpen(2, 3)]))
-            == "ClosedOpenSet([ClosedOpen(None, 1), ClosedOpen(2, 3)])"
+            == "ClosedOpenSet([RightOpen(1), ClosedOpen(2, 3)])"
         )
         assert (
             repr(IntervalSet([ClosedOpen(0, 1), ClosedOpen(2, None)]))
-            == "ClosedOpenSet([ClosedOpen(0, 1), ClosedOpen(2, None)])"
+            == "ClosedOpenSet([ClosedOpen(0, 1), LeftClosed(2)])"
         )
 
 
 class TestIntervalStr:
     def test_empty(self) -> None:
-        assert str(EMPTY) == "[;]"
+        assert str(EMPTY) == "⟨;⟩"
 
     def test_interval(self) -> None:
         assert str(Open(0, 1)) == "(0 ; 1)"
@@ -791,24 +816,24 @@ class TestIntervalStr:
         assert str(ClosedOpen(0, 1)) == "[0 ; 1)"
 
     def test_interval_unbounded(self) -> None:
-        assert str(Open(None, 1)) == "(-inf ; 1)"
-        assert str(Closed(None, 1)) == "[-inf ; 1]"
-        assert str(OpenClosed(None, 1)) == "(-inf ; 1]"
-        assert str(ClosedOpen(None, 1)) == "[-inf ; 1)"
-        assert str(Open(0, None)) == "(0 ; +inf)"
-        assert str(Closed(0, None)) == "[0 ; +inf]"
-        assert str(OpenClosed(0, None)) == "(0 ; +inf]"
-        assert str(ClosedOpen(0, None)) == "[0 ; +inf)"
-        assert str(Open(None, None)) == "(-inf ; +inf)"
-        assert str(Closed(None, None)) == "[-inf ; +inf]"
-        assert str(OpenClosed(None, None)) == "(-inf ; +inf]"
-        assert str(ClosedOpen(None, None)) == "[-inf ; +inf)"
+        assert str(Open(None, 1)) == "⟨-inf ; 1)"
+        assert str(Closed(None, 1)) == "⟨-inf ; 1]"
+        assert str(OpenClosed(None, 1)) == "⟨-inf ; 1]"
+        assert str(ClosedOpen(None, 1)) == "⟨-inf ; 1)"
+        assert str(Open(0, None)) == "(0 ; +inf⟩"
+        assert str(Closed(0, None)) == "[0 ; +inf⟩"
+        assert str(OpenClosed(0, None)) == "(0 ; +inf⟩"
+        assert str(ClosedOpen(0, None)) == "[0 ; +inf⟩"
+        assert str(Open(None, None)) == "⟨-inf ; +inf⟩"
+        assert str(Closed(None, None)) == "⟨-inf ; +inf⟩"
+        assert str(OpenClosed(None, None)) == "⟨-inf ; +inf⟩"
+        assert str(ClosedOpen(None, None)) == "⟨-inf ; +inf⟩"
 
     def test_interval_set(self) -> None:
-        assert str(IntervalSet()) == "[;]"
+        assert str(IntervalSet()) == "⟨;⟩"
         assert str(IntervalSet([Open(0, 1)])) == "(0 ; 1)"
         assert str(IntervalSet([Open(0, 1), Closed(2, 3)])) == "(0 ; 1) | [2 ; 3]"
         assert str(IntervalSet([Open(0, 1), Closed(2, 3), ClosedOpen(4, 5)])) == "(0 ; 1) | [2 ; 3] | [4 ; 5)"
-        assert str(IntervalSet([Open(None, 1), Closed(2, 3), ClosedOpen(4, 5)])) == "(-inf ; 1) | [2 ; 3] | [4 ; 5)"
-        assert str(IntervalSet([Open(0, 1), Closed(2, 3), ClosedOpen(4, None)])) == "(0 ; 1) | [2 ; 3] | [4 ; +inf)"
-        assert str(IntervalSet([Closed(0, 1), Open(2, 3), OpenClosed(4, None)])) == "[0 ; 1] | (2 ; 3) | (4 ; +inf]"
+        assert str(IntervalSet([Open(None, 1), Closed(2, 3), ClosedOpen(4, 5)])) == "⟨-inf ; 1) | [2 ; 3] | [4 ; 5)"
+        assert str(IntervalSet([Open(0, 1), Closed(2, 3), ClosedOpen(4, None)])) == "(0 ; 1) | [2 ; 3] | [4 ; +inf⟩"
+        assert str(IntervalSet([Closed(0, 1), Open(2, 3), OpenClosed(4, None)])) == "[0 ; 1] | (2 ; 3) | (4 ; +inf⟩"

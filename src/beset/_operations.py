@@ -1,6 +1,6 @@
 from collections.abc import Iterable
 from heapq import heappop, heappush
-from itertools import compress, groupby
+from itertools import groupby
 from operator import itemgetter
 from typing import TypeVar
 
@@ -74,16 +74,13 @@ def union_data(intervals: Iterable[IntervalData[T]]) -> IntervalData[T]:
     """
     Return the data for a union of the given interval data sets
     """
-    oddities, left_edges, bounds, right_edges = tuple(zip(*intervals)) or ((), (), (), ())
+    oddities, bounds = tuple(zip(*intervals)) or ((), ())
     active = list[bool](oddities)
     odd = any(active)
-    left_edge = all(compress(left_edges, active))
 
     new_bounds = tuple(generate_union_bounds(active, iterate_bounds(bounds)))
 
-    right_edge = any(compress(right_edges, active))
-
-    return odd, left_edge, new_bounds, right_edge
+    return odd, new_bounds
 
 
 def generate_intersection_bounds(
@@ -115,17 +112,13 @@ def intersection_data(intervals: Iterable[IntervalData[T]]) -> IntervalData[T]:
     """
     Return the data for an intersection of the given interval data sets
     """
-    oddities, left_edges, bounds, right_edges = tuple(zip(*intervals)) or ((), (), (), ())
+    oddities, bounds = tuple(zip(*intervals)) or ((), ())
     active = list[bool](oddities)
     odd = all(active)
 
-    left_edge = any(compress(left_edges, active))
-
     new_bounds = tuple(generate_intersection_bounds(active, iterate_bounds(bounds)))
 
-    right_edge = all(compress(right_edges, active))
-
-    return odd, left_edge, new_bounds, right_edge
+    return odd, new_bounds
 
 
 def check_is_disjoint(active: list[bool], tagged_bounds: Iterable[tuple[Bound[T], Iterable[TaggedBound[T]]]]) -> bool:
@@ -152,7 +145,7 @@ def is_disjoint(intervals: Iterable[IntervalData[T]]) -> bool:
     """
     Return True iff there is no overlap between any of the intervals
     """
-    oddities, _, bounds, _ = tuple(zip(*intervals)) or ((), (), (), ())
+    oddities, bounds = tuple(zip(*intervals)) or ((), ())
     active = list[bool](oddities)
 
     return check_is_disjoint(active, iterate_bounds(bounds))
@@ -179,8 +172,8 @@ def is_subset(a: IntervalData[T], b: IntervalData[T]) -> bool:
     """
     Return True iff a is a subset of b
     """
-    a_odd, _, a_bounds, _ = a
-    b_odd, _, b_bounds, _ = b
+    a_odd, a_bounds = a
+    b_odd, b_bounds = b
 
     return check_is_subset([a_odd, b_odd], iterate_bounds((a_bounds, b_bounds)))
 
@@ -214,8 +207,8 @@ def is_proper_subset(a: IntervalData[T], b: IntervalData[T]) -> bool:
     """
     Return True iff a is a proper subset of b (b is larger)
     """
-    a_odd, _, a_bounds, _ = a
-    b_odd, _, b_bounds, _ = b
+    a_odd, a_bounds = a
+    b_odd, b_bounds = b
 
     return check_is_proper_subset([a_odd, b_odd], iterate_bounds((a_bounds, b_bounds)))
 
@@ -238,27 +231,23 @@ def difference_data(a: IntervalData[T], b: IntervalData[T]) -> IntervalData[T]:
     """
     Return IntervalData for an IntervalSet that contains everything from a unless it's in b
     """
-    a_odd, a_left_sinister, a_bounds, a_right_sinister = a
-    b_odd, b_left_sinister, b_bounds, b_right_sinister = b
+    a_odd, a_bounds = a
+    b_odd, b_bounds = b
     active = [a_odd, b_odd]
 
     odd = a_odd and not b_odd
 
-    left_sinister = (a_left_sinister and active[0]) or (b_left_sinister and not active[1])
-
     bounds = tuple(generate_difference_bounds(active, iterate_bounds((a_bounds, b_bounds))))
 
-    right_sinister = (a_right_sinister and active[0]) and (b_right_sinister and not active[1])
-
-    return odd, left_sinister, bounds, right_sinister
+    return odd, bounds
 
 
 def complement_data(d: IntervalData[T]) -> IntervalData[T]:
     """
     Return IntervalData for the complement of d
     """
-    odd, left_sinister, bounds, right_sinister = d
-    return not odd, left_sinister, bounds, right_sinister
+    odd, bounds = d
+    return not odd, bounds
 
 
 SINISTERITY_TO_CLASS_NAME = {
@@ -272,21 +261,41 @@ SINISTERITY_TO_CLASS_NAME = {
 def bounds_to_repr(start: Bound[object], stop: Bound[object]) -> str:
     """
     Return the technical representation for a continuous interval between two bounds:
-    Examples: Closed(3, 7), Closed(-100, None), Open(None, None), ClosedOpen("abc", "bcd")
+    Examples: Closed(3, 7), LeftClosed(-100), Unbounded(), ClosedOpen("abc", "bcd")
     """
     left, left_sinister = start
     right, right_sinister = stop
-    return f"{SINISTERITY_TO_CLASS_NAME[left_sinister, right_sinister]}({left!r}, {right!r})"
+
+    if left is None:
+        if right is None:
+            return "Unbounded()"
+        else:
+            cls_name = "RightClosed" if right_sinister else "RightOpen"
+            return f"{cls_name}({right!r})"
+    else:
+        if right is None:
+            cls_name = "LeftOpen" if left_sinister else "LeftClosed"
+            return f"{cls_name}({left!r})"
+        else:
+            return f"{SINISTERITY_TO_CLASS_NAME[left_sinister, right_sinister]}({left!r}, {right!r})"
 
 
 def bounds_to_str(start: Bound[object], stop: Bound[object]) -> str:
     """
     Return a nice notation for a continuous interval between two bounds.
-    Examples: [3 ; 7], [-100 ; +inf], (-inf ; + inf), ["abc" ; "bcd")
+    Examples: (3 ; 7], [-100 ; +inf⟩, ⟨-inf ; +inf⟩, ["abc" ; "bcd")
     """
     left, left_sinister = start
     right, right_sinister = stop
 
-    lower = ("(" if left_sinister else "[") + ("-inf" if left is None else repr(left))
-    upper = ("+inf" if right is None else repr(right)) + ("]" if right_sinister else ")")
+    if left is None:
+        lower = "⟨-inf"
+    else:
+        lower = ("(" if left_sinister else "[") + repr(left)
+
+    if right is None:
+        upper = "+inf⟩"
+    else:
+        upper = repr(right) + ("]" if right_sinister else ")")
+
     return f"{lower} ; {upper}"
