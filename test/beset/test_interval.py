@@ -1,501 +1,872 @@
-from itertools import permutations
-from typing import Any
+from typing import TypeVar
 
-from pytest import mark, raises
+from pytest import fail, raises
 
 from beset import (
     EMPTY,
-    INF,
+    UNBOUNDED,
     Closed,
     ClosedOpen,
-    ConcreteInterval,
-    InfinityTypes,
+    ClosedOpenSet,
+    ClosedSet,
+    Empty,
     Interval,
     IntervalSet,
+    LeftClosed,
+    LeftOpen,
     Open,
     OpenClosed,
+    OpenClosedSet,
+    OpenSet,
+    RightClosed,
+    RightOpen,
+    Sortable,
+    Unbounded,
 )
 
-
-def test_interval_immutable(
-    interval_class: type[ConcreteInterval[int]],
-) -> None:
-    with raises(AttributeError):
-        interval_class(0, 0).intervals = ()  # type:ignore[ty:invalid-assignment,unused-ignore,misc]
-
-    with raises(AttributeError):
-        interval_class(0, 0).start = 0  # type:ignore[ty:invalid-assignment,unused-ignore,misc]
-
-    with raises(AttributeError):
-        interval_class(0, 0).stop = 0  # type:ignore[ty:invalid-assignment,unused-ignore,misc]
-
-
-def test_interval_instance_of_interval_set(
-    interval_class: type[ConcreteInterval[int]],
-) -> None:
-    """
-    type checkers should be satisfied an interval is an interval set
-    """
-    result: IntervalSet[int] = interval_class(0, 1)
-    assert result
-
-
-def test_interval_covariant() -> None:
-    """
-    type checkers should be satisfied result Interval[bool] is a valid IntervalSet[int]
-    since bools are ints
-    """
-    open: Open[int] = Open[bool](False, True)
-    assert open
-    closed: Closed[int] = Closed[bool](False, True)
-    assert closed
-    closed_open: ClosedOpen[int] = ClosedOpen[bool](False, True)
-    assert closed_open
-    open_closed: OpenClosed[int] = OpenClosed[bool](False, True)
-    assert open_closed
-
-
-@mark.parametrize("a,b", [(0, 1), (1, 2), ("a", "b"), ("b", "c")])
-def test_interval_empty(a: int | str, b: int | str) -> None:
-    assert Closed(b, a).empty()
-    assert not Closed(b, b).empty()
-    assert not Closed(a, b).empty()
-
-    assert Open(b, a).empty()
-    assert Open(b, b).empty()
-    assert not Open(a, b).empty()
-
-    assert ClosedOpen(b, a).empty()
-    assert ClosedOpen(b, b).empty()
-    assert not ClosedOpen(a, b).empty()
-
-    assert OpenClosed(b, a).empty()
-    assert OpenClosed(b, b).empty()
-    assert not OpenClosed(a, b).empty()
-
-
-def test_interval_empty_infinity(interval_class: type[ConcreteInterval[Any]]) -> None:
-    assert interval_class(-INF, -INF).empty()
-    assert interval_class(INF, INF).empty()
-
-
-@mark.parametrize("a,b", [(0, 0), (1, 1), ("a", "a"), ("b", "b")])
-def test_interval_eq_empty(a: int | str, b: int | str) -> None:
-    assert Open(a, b) == Open(a, b)
-    assert not Open(a, b) == Closed(a, b)
-    assert Open(a, b) == ClosedOpen(a, b)
-    assert Open(a, b) == OpenClosed(a, b)
-
-    assert not Closed(a, b) == Open(a, b)
-    assert Closed(a, b) == Closed(a, b)
-    assert not Closed(a, b) == ClosedOpen(a, b)
-    assert not Closed(a, b) == OpenClosed(a, b)
-
-    assert ClosedOpen(a, b) == Open(a, b)
-    assert not ClosedOpen(a, b) == Closed(a, b)
-    assert ClosedOpen(a, b) == ClosedOpen(a, b)
-    assert ClosedOpen(a, b) == OpenClosed(a, b)
-
-    assert OpenClosed(a, b) == Open(a, b)
-    assert not OpenClosed(a, b) == Closed(a, b)
-    assert OpenClosed(a, b) == ClosedOpen(a, b)
-    assert OpenClosed(a, b) == OpenClosed(a, b)
-
-
-def test_interval_eq_empty_different_types(
-    interval_class_a: type[ConcreteInterval[int]],
-    interval_class_b: type[ConcreteInterval[int]],
-) -> None:
-    assert interval_class_a(1, 0) == interval_class_b(2, 0)
-
-
-@mark.parametrize("a,b", [(0, 1), (1, 2), ("a", "b"), ("b", "c")])
-def test_interval_eq_not_empty(a: int | str, b: int | str) -> None:
-    assert Open(a, b) == Open(a, b)
-    assert not Open(a, b) == Closed(a, b)
-    assert not Open(a, b) == ClosedOpen(a, b)
-    assert not Open(a, b) == OpenClosed(a, b)
-
-    assert not Closed(a, b) == Open(a, b)
-    assert Closed(a, b) == Closed(a, b)
-    assert not Closed(a, b) == ClosedOpen(a, b)
-    assert not Closed(a, b) == OpenClosed(a, b)
-
-    assert not ClosedOpen(a, b) == Open(a, b)
-    assert not ClosedOpen(a, b) == Closed(a, b)
-    assert ClosedOpen(a, b) == ClosedOpen(a, b)
-    assert not ClosedOpen(a, b) == OpenClosed(a, b)
-
-    assert not OpenClosed(a, b) == Open(a, b)
-    assert not OpenClosed(a, b) == Closed(a, b)
-    assert not OpenClosed(a, b) == ClosedOpen(a, b)
-    assert OpenClosed(a, b) == OpenClosed(a, b)
-
-
-def test_interval_hash_unbounded_different_types(
-    interval_class_a: type[ConcreteInterval[Any]],
-    interval_class_b: type[ConcreteInterval[Any]],
-) -> None:
-    assert interval_class_a(-INF, INF) == interval_class_b(-INF, INF)
-
-
-def test_interval_eq_different_type() -> None:
-    assert Open(1, 2) != Open("1", "2")
-
-
-@mark.parametrize("a,b", [(0, 0), (1, 1), ("a", "a"), ("b", "b")])
-def test_interval_hash_empty(a: int | str, b: int | str) -> None:
-    assert hash(Open(a, b)) == hash(Open(a, b))
-    assert not hash(Open(a, b)) == hash(Closed(a, b))
-    assert hash(Open(a, b)) == hash(ClosedOpen(a, b))
-    assert hash(Open(a, b)) == hash(OpenClosed(a, b))
-
-    assert not hash(Closed(a, b)) == hash(Open(a, b))
-    assert hash(Closed(a, b)) == hash(Closed(a, b))
-    assert not hash(Closed(a, b)) == hash(ClosedOpen(a, b))
-    assert not hash(Closed(a, b)) == hash(OpenClosed(a, b))
-
-    assert hash(ClosedOpen(a, b)) == hash(Open(a, b))
-    assert not hash(ClosedOpen(a, b)) == hash(Closed(a, b))
-    assert hash(ClosedOpen(a, b)) == hash(ClosedOpen(a, b))
-    assert hash(ClosedOpen(a, b)) == hash(OpenClosed(a, b))
-
-    assert hash(OpenClosed(a, b)) == hash(Open(a, b))
-    assert not hash(OpenClosed(a, b)) == hash(Closed(a, b))
-    assert hash(OpenClosed(a, b)) == hash(ClosedOpen(a, b))
-    assert hash(OpenClosed(a, b)) == hash(OpenClosed(a, b))
-
-
-def test_interval_hash_empty_different_types(
-    interval_class_a: type[ConcreteInterval[int]],
-    interval_class_b: type[ConcreteInterval[int]],
-) -> None:
-    assert hash(interval_class_a(1, 0)) == hash(interval_class_b(2, 0))
-
-
-@mark.parametrize("a,b", [(0, 1), (1, 2), ("a", "b"), ("b", "c")])
-def test_interval_hash_not_empty(a: int | str, b: int | str) -> None:
-    assert hash(Open(a, b)) == hash(Open(a, b))
-    assert not hash(Open(a, b)) == hash(Closed(a, b))
-    assert not hash(Open(a, b)) == hash(ClosedOpen(a, b))
-    assert not hash(Open(a, b)) == hash(OpenClosed(a, b))
-
-    assert not hash(Closed(a, b)) == hash(Open(a, b))
-    assert hash(Closed(a, b)) == hash(Closed(a, b))
-    assert not hash(Closed(a, b)) == hash(ClosedOpen(a, b))
-    assert not hash(Closed(a, b)) == hash(OpenClosed(a, b))
-
-    assert not hash(ClosedOpen(a, b)) == hash(Open(a, b))
-    assert not hash(ClosedOpen(a, b)) == hash(Closed(a, b))
-    assert hash(ClosedOpen(a, b)) == hash(ClosedOpen(a, b))
-    assert not hash(ClosedOpen(a, b)) == hash(OpenClosed(a, b))
-
-    assert not hash(OpenClosed(a, b)) == hash(Open(a, b))
-    assert not hash(OpenClosed(a, b)) == hash(Closed(a, b))
-    assert not hash(OpenClosed(a, b)) == hash(ClosedOpen(a, b))
-    assert hash(OpenClosed(a, b)) == hash(OpenClosed(a, b))
-
-
-def test_interval_eq_unbounded_different_types(
-    interval_class_a: type[ConcreteInterval[Any]],
-    interval_class_b: type[ConcreteInterval[Any]],
-) -> None:
-    assert hash(interval_class_a(-INF, INF)) == hash(interval_class_b(-INF, INF))
-
-
-def test_interval_hash_different_type() -> None:
-    assert hash(Open(1, 2)) != hash(Open("1", "2"))
-
-
-def test_contains(interval_class: type[ConcreteInterval[int]]) -> None:
-    interval = interval_class(1, 3)
-    assert 0 not in interval
-    assert (1 in interval) == interval.includes_lower_bound()
-    assert 2 in interval
-    assert (3 in interval) == interval.includes_upper_bound()
-    assert 4 not in interval
-    assert "a" not in interval
-
-
-def test_contains_empty(empty: IntervalSet[int]) -> None:
-    assert 0 not in empty
-
-
-def test_contains_different_type() -> None:
-    assert "a" not in (Open(0, 1) | Open(2, 3))
-
-
-def test_intervals_iterable_union_as_method() -> None:
-    assert tuple(Open(1, 2)._iterable_union(Closed(3, 4))) == (Open(1, 2), Closed(3, 4))
-
-
-def test_intervals_iterable_union(empty: IntervalSet[int]) -> None:
-    # empty
-    assert tuple(Interval._iterable_union()) == ()
-    assert tuple(Interval._iterable_union(EMPTY)) == ()
-    assert tuple(Interval._iterable_union(*((EMPTY,) * 10))) == ()
-
-    # disjoint
-    for factor in range(1, 3):
-        for intervals in permutations((Open(0, 1), Closed(2, 3), Open(4, 5)) * factor):
-            assert tuple(Interval._iterable_union(*intervals)) == (
-                Open(0, 1),
-                Closed(2, 3),
-                Open(4, 5),
-            )
-
-    # overlapping
-    for factor in range(1, 3):
-        for intervals in permutations((Open(0, 2), Closed(1, 4), Open(3, 5)) * factor):
-            assert tuple(Interval._iterable_union(*intervals)) == (Open(0, 5),)
-
-    # touching
-    for factor in range(1, 3):
-        for intervals in permutations((Open(0, 2), Open(2, 4), Closed(2, 3)) * factor):
-            assert tuple(Interval._iterable_union(*intervals)) == (Open(0, 4),)
-
-    # not touching
-    for factor in range(1, 3):
-        for intervals in permutations((Open(0, 2), Open(2, 4), Open(2, 3)) * factor):
-            assert tuple(Interval._iterable_union(*intervals)) == (Open(0, 2), Open(2, 4))
-
-
-def test_interval_union(
-    interval_class_a: type[ConcreteInterval[int]],
-    interval_class_b: type[ConcreteInterval[int]],
-    interval_class_c: type[ConcreteInterval[int]],
-    empty: IntervalSet[int],
-) -> None:
-    # empty
-    a = interval_class_a(1, 0)
-    b = interval_class_b(1, 0)
-    c = interval_class_c(1, 0)
-    assert a.union(b, c) == empty
-
-    # overlapping
-    a = interval_class_a(0, 2)
-    b = interval_class_b(1, 4)
-    c = interval_class_c(3, 5)
-    assert a.union(b, c) == IntervalSet((Interval(0, 5, a.includes_lower_bound(), c.includes_upper_bound()),))
-
-    # disjoint
-    a = interval_class_a(0, 1)
-    b = interval_class_b(2, 3)
-    c = interval_class_c(4, 5)
-    assert a.union(b, c) == IntervalSet((a, b, c))
-
-
-def test_interval_binary_intersection(
-    interval_class_a: type[ConcreteInterval[int]],
-    interval_class_b: type[ConcreteInterval[int]],
-    empty: IntervalSet[int],
-) -> None:
-    # empty
-    v = interval_class_a(0, -1)
-    w = interval_class_b(0, -1)
-    assert v._binary_intersection(w) == empty
-
-    # zero-length
-    v = interval_class_a(0, 0)
-    w = interval_class_b(0, 0)
-    assert v._binary_intersection(w) == Interval(
-        0,
-        0,
-        v.includes_lower_bound() and w.includes_lower_bound(),
-        v.includes_upper_bound() and w.includes_upper_bound(),
-    )
-
-    # disjoint
-    v = interval_class_a(0, 1)
-    w = interval_class_b(2, 3)
-    assert v._binary_intersection(w) == empty
-
-    # disjoint reversed
-    v = interval_class_a(2, 3)
-    w = interval_class_b(0, 1)
-    assert v._binary_intersection(w) == empty
-
-    # overlapping
-    v = interval_class_a(0, 2)
-    w = interval_class_b(1, 3)
-    assert v._binary_intersection(w) == Interval(1, 2, w.includes_lower_bound(), v.includes_upper_bound())
-
-    # overlapping reversed
-    v = interval_class_a(1, 3)
-    w = interval_class_b(0, 2)
-    assert v._binary_intersection(w) == Interval(1, 2, v.includes_lower_bound(), w.includes_upper_bound())
-
-    # touching
-    v = interval_class_a(0, 1)
-    w = interval_class_b(1, 2)
-    assert v._binary_intersection(w) == (
-        Closed(1, 1) if v.includes_upper_bound() and w.includes_lower_bound() else empty
-    )
-
-    # touching reversed
-    v = interval_class_a(1, 2)
-    w = interval_class_b(0, 1)
-    assert v._binary_intersection(w) == (
-        Closed(1, 1) if v.includes_lower_bound() and w.includes_upper_bound() else empty
-    )
-
-    # touching lower bound internally
-    v = interval_class_a(0, 1)
-    w = interval_class_b(0, 2)
-    assert v._binary_intersection(w) == Interval(
-        0, 1, v.includes_lower_bound() and w.includes_lower_bound(), v.includes_upper_bound()
-    )
-
-    # touching lower bound internally reversed
-    v = interval_class_a(0, 2)
-    w = interval_class_b(0, 1)
-    assert v._binary_intersection(w) == Interval(
-        0, 1, v.includes_lower_bound() and w.includes_lower_bound(), w.includes_upper_bound()
-    )
-
-    # touching upper bound internally
-    v = interval_class_a(0, 2)
-    w = interval_class_b(1, 2)
-    assert v._binary_intersection(w) == Interval(
-        1, 2, w.includes_lower_bound(), v.includes_upper_bound() and w.includes_upper_bound()
-    )
-
-    # touching upper bound internally reversed
-    v = interval_class_a(1, 2)
-    w = interval_class_b(0, 2)
-    assert v._binary_intersection(w) == Interval(
-        1, 2, v.includes_lower_bound(), v.includes_upper_bound() and w.includes_upper_bound()
-    )
-
-
-def test_interval_intersection(
-    interval_class_a: type[ConcreteInterval[int]],
-    interval_class_b: type[ConcreteInterval[int]],
-    interval_class_c: type[ConcreteInterval[int]],
-    empty: IntervalSet[int],
-) -> None:
-    a = interval_class_a(0, 3)
-    b = interval_class_b(1, 4)
-    c = interval_class_c(2, 6)
-    assert a & b & c == Interval(2, 3, c.includes_lower_bound(), a.includes_upper_bound())
-
-    a = interval_class_a(0, 4)
-    b = interval_class_b(1, 4)
-    c = interval_class_c(2, 3)
-    assert a & b & c == c
-
-    a = interval_class_a(0, 3)
-    b = interval_class_b(1, 3)
-    c = interval_class_c(2, 3)
-    assert a & b & c == Interval(
-        2,
-        3,
-        c.includes_lower_bound(),
-        a.includes_upper_bound() and b.includes_upper_bound() and c.includes_upper_bound(),
-    )
-
-    a = interval_class_a(0, 1)
-    b = interval_class_b(2, 3)
-    c = interval_class_c(4, 5)
-    assert a & b & c == empty
-
-    a = interval_class_a(0, 3)
-    b = interval_class_b(2, 2)
-    c = interval_class_c(1, 4)
-    assert a & b & c == b
-
-
-def test_interval_intersection_interval_type() -> None:
-    """
-    type checkers should be satisfied result is Interval and not IntervalSet
-    """
-    result: Interval[int] = Open(0, 2).intersection(Open(1, 3))
-    assert result == Open(1, 2)
-
-
-def test_interval_bounded() -> None:
-    """
-    type checkers should be satisfied that result is interval of type int without InfinityTypes
-    """
-    # mypy disapproves
-    result_1: Interval[int] = (Open(-INF, 1) & Open(0, INF)).bounded()  # type:ignore[assignment]
-    assert result_1 == Open(0, 1)
-
-    # all approve
-    result_2: Interval[int] = (Open[int | InfinityTypes](-INF, 1) & Open[int | InfinityTypes](0, INF)).bounded()
-    assert result_2 == Open(0, 1)
-
-
-def test_interval_bounded_error() -> None:
-    with raises(TypeError):
-        Open(-INF, 0).bounded()
-    with raises(TypeError):
-        Open(0, INF).bounded()
-
-
-@mark.parametrize(
-    ["interval_class_a", "interval_class_b"],
-    [(Open, Open), (Closed, Closed), (ClosedOpen, ClosedOpen), (OpenClosed, OpenClosed)],
-)
-def test_interval_intersection_type_narrowing(
-    interval_class_a: type[ConcreteInterval[int]], interval_class_b: type[ConcreteInterval[int | InfinityTypes]]
-) -> None:
-    """
-    type checkers should be satisfied that x will be an interval of type int without InfinityTypes
-    (the reverse is not supported though; intervals without InfinityTypes must always come first)
-    """
-    x: Interval[int] = interval_class_a(0, 2) & interval_class_b(1, INF)
-    assert x == interval_class_a(1, 2)
-
-
-def test_interval_complement(empty: IntervalSet[int]) -> None:
-    assert ~empty == Closed(-INF, INF)
-    assert ~Open(-INF, 0) == Closed(0, INF)
-    assert ~Closed(-INF, 0) == Open(0, INF)
-    assert ~Open(0, INF) == Closed(-INF, 0)
-    assert ~Closed(0, INF) == Open(-INF, 0)
-    assert ~ClosedOpen(-INF, 0) == ClosedOpen(0, INF)
-    assert ~OpenClosed(-INF, 0) == OpenClosed(0, INF)
-    assert ~ClosedOpen(0, INF) == ClosedOpen(-INF, 0)
-    assert ~OpenClosed(0, INF) == OpenClosed(-INF, 0)
-
-
-def test_interval_difference(
-    empty_a: IntervalSet[int],
-    empty_b: IntervalSet[int],
-    empty_c: IntervalSet[int],
-) -> None:
-    assert empty_a - empty_b == empty_c
-    assert Closed(0, 10) - empty_a == Closed(0, 10)
-    assert Closed(0, 10) - Open(2, 3) == Closed(0, 2) | Closed(3, 10)
-    assert Closed(0, 10) - Open(0, 10) == Closed(0, 0) | Closed(10, 10)
-    assert Closed(0, 10).difference(Open(2, 3), Closed(5, 6)) == Closed(0, 2) | ClosedOpen(3, 5) | OpenClosed(6, 10)
-    assert Closed(0, 10).difference(Open(-INF, 2), Open(8, INF)) == Closed(2, 8)
-    assert Closed(0, 10).difference(Closed(4, 4), Closed(6, 6)) == ClosedOpen(0, 4) | Open(4, 6) | OpenClosed(6, 10)
-
-
-def test_interval_isdisjoint_empty(empty_a: IntervalSet[Any], empty_b: IntervalSet[Any]) -> None:
-    assert empty_a.isdisjoint(empty_b)
-
-
-def test_interval_isdisjoint_empty_non_empty(empty: IntervalSet[Any]) -> None:
-    assert empty.isdisjoint(Open(0, 1))
-    assert Open(0, 1).isdisjoint(empty)
-
-
-class TestIntervalLE:
-    def test_interval_le_empty(self, empty_a: IntervalSet[Any], empty_b: IntervalSet[Any]) -> None:
-        assert empty_a <= empty_b
-
-
-    def test_interval_le_empty_full(self, empty: IntervalSet[Any], interval_class: type[ConcreteInterval[int]]) -> None:
-        assert empty <= interval_class(0, 1)
-
-
-    def test_interval_le(self, relative_combination: tuple[Interval[int], Interval[int]]) -> None:
-        a, b = relative_combination
-
-        left_covered = b.start < a.start or b.includes_lower_bound() >= a.includes_lower_bound() and not a.start < b.start
-        right_covered = a.stop < b.stop or b.includes_upper_bound() >= a.includes_upper_bound() and not b.stop < a.stop
-
-        assert (a <= b) == (left_covered and right_covered)
+T = TypeVar("T", covariant=True, bound=Sortable | None)
+IntervalType = Open[T] | Closed[T] | ClosedOpen[T] | OpenClosed[T]
+
+
+def assert_exact_match(x: IntervalSet[Sortable | None], y: IntervalSet[Sortable | None]) -> None:
+    __tracebackhide__ = True
+    if not (type(x) is type(y) and x._odd == y._odd and x._bounds == y._bounds):
+        problem = "Intervals not an exact match!\n"
+        for name, a, b in [
+            ("type", type(x), type(y)),
+            ("odd", x._odd, y._odd),
+            ("bounds", x._bounds, y._bounds),
+        ]:
+            problem += f"{name}: {a} {'==' if a == b else '!='} {b}  {'✅' if a == b else '❌'}\n"
+
+        fail(problem)
+
+
+def assert_not_exact_match(x: IntervalSet[Sortable | None], y: IntervalSet[Sortable | None]) -> None:
+    __tracebackhide__ = True
+    if type(x) is type(y) and x._odd == y._odd and x._bounds == y._bounds:
+        fail("Intervals match exactly when the shouldn't!")
+
+
+class TestIntervalCreation:
+    def test_empty(self) -> None:
+        assert type(Empty()) is Empty
+
+    def test_interval_restricted(self) -> None:
+        assert type(Open(0, 1)) is Open
+        assert type(Open(0, None)) is LeftOpen
+        assert type(Open(None, 0)) is RightOpen
+        assert type(Open(None, None)) is Unbounded
+
+    def test_interval_restricted_but_empty(self, interval_class: type[IntervalType[int]]) -> None:
+        with raises(ValueError):
+            type(interval_class(1, 0))
+
+    def test_interval_but_zero_length(self) -> None:
+        with raises(ValueError):
+            Open(0, 0)
+        with raises(ValueError):
+            OpenClosed(0, 0)
+        with raises(ValueError):
+            ClosedOpen(0, 0)
+
+        assert Closed(0, 0)
+
+    def test_interval(self) -> None:
+        assert type(Interval(0, 1, False, False)) is Open
+        assert type(Interval(0, 1, False, True)) is OpenClosed
+        assert type(Interval(0, 1, True, False)) is ClosedOpen
+        assert type(Interval(0, 1, True, True)) is Closed
+
+        assert type(Interval(None, 1, False, False)) is RightOpen
+        assert type(Interval(None, 1, False, True)) is RightClosed
+        assert type(Interval(None, 1, True, False)) is RightOpen
+        assert type(Interval(None, 1, True, True)) is RightClosed
+
+        assert type(Interval(0, None, False, False)) is LeftOpen
+        assert type(Interval(0, None, False, True)) is LeftOpen
+        assert type(Interval(0, None, True, False)) is LeftClosed
+        assert type(Interval(0, None, True, True)) is LeftClosed
+
+        assert type(Interval(None, None, False, False)) is Unbounded
+        assert type(Interval(None, None, False, True)) is Unbounded
+        assert type(Interval(None, None, True, False)) is Unbounded
+        assert type(Interval(None, None, True, True)) is Unbounded
+
+    def test_interval_but_empty(self) -> None:
+        with raises(ValueError):
+            Interval(1, 0, False, False)
+        with raises(ValueError):
+            Interval(1, 0, False, True)
+        with raises(ValueError):
+            Interval(1, 0, True, False)
+        with raises(ValueError):
+            Interval(1, 0, True, True)
+
+    def test_interval_set_restricted(self) -> None:
+        assert type(OpenSet([Open(0, 1), Open(2, 3)])) is OpenSet
+        assert type(ClosedSet([Closed(0, 1), Closed(2, 3)])) is ClosedSet
+        assert type(OpenClosedSet([OpenClosed(0, 1), OpenClosed(2, 3)])) is OpenClosedSet
+        assert type(ClosedOpenSet([ClosedOpen(0, 1), ClosedOpen(2, 3)])) is ClosedOpenSet
+
+    def test_interval_set_restricted_but_singular(self) -> None:
+        assert type(OpenSet([Open(0, 1)])) is Open
+        assert type(ClosedSet([Closed(0, 1)])) is Closed
+        assert type(OpenClosedSet([OpenClosed(0, 1)])) is OpenClosed
+        assert type(ClosedOpenSet([ClosedOpen(0, 1)])) is ClosedOpen
+
+    def test_interval_set_restricted_but_empty(self) -> None:
+        assert type(OpenSet()) is Empty
+        assert type(ClosedSet()) is Empty
+        assert type(OpenClosedSet()) is Empty
+        assert type(ClosedOpenSet()) is Empty
+
+    def test_interval_set(self) -> None:
+        assert type(IntervalSet([Open(0, 1), Closed(2, 3)])) is IntervalSet
+
+    def test_interval_set_but_restricted(self) -> None:
+        assert type(IntervalSet([Open(0, 1), Open(2, 3)])) is OpenSet
+        assert type(IntervalSet([Closed(0, 1), Closed(2, 3)])) is ClosedSet
+        assert type(IntervalSet([OpenClosed(0, 1), OpenClosed(2, 3)])) is OpenClosedSet
+        assert type(IntervalSet([ClosedOpen(0, 1), ClosedOpen(2, 3)])) is ClosedOpenSet
+
+    def test_interval_set_but_singular(self) -> None:
+        assert type(IntervalSet([Open(0, 1)])) is Open
+        assert type(IntervalSet([Closed(0, 1)])) is Closed
+        assert type(IntervalSet([OpenClosed(0, 1)])) is OpenClosed
+        assert type(IntervalSet([ClosedOpen(0, 1)])) is ClosedOpen
+
+    def test_interval_set_but_empty(self) -> None:
+        assert type(IntervalSet()) is Empty
+
+    def test_interval_set_simplification(self) -> None:
+        assert IntervalSet() == EMPTY
+        assert IntervalSet([EMPTY, EMPTY]) == EMPTY
+        assert IntervalSet([EMPTY, EMPTY, EMPTY]) == EMPTY
+        assert IntervalSet([Open(0, 4), EMPTY]) == Open(0, 4)
+        assert IntervalSet([Open(0, 4), Closed(2, 6)]) == OpenClosed(0, 6)
+        assert IntervalSet([Open(None, 4), Closed(2, 6)]) == RightClosed(6)
+        assert IntervalSet([Open(None, 4), Closed(2, 6), ClosedOpen(7, 9)]) == IntervalSet(
+            [RightClosed(6), ClosedOpen(7, 9)]
+        )
+        assert_exact_match(
+            IntervalSet([Open(None, 4), Closed(2, 6), OpenClosed(7, 9)]),
+            OpenClosedSet([OpenClosed(None, 6), OpenClosed(7, 9)]),
+        )
+
+
+class TestIntervalCovariance:
+    def test_interval(self) -> None:
+        """
+        type checkers should be satisfied result Interval[bool] is a valid Interval[int]
+        since bools are ints
+        """
+        open: Open[int] = Open[bool](False, True)
+        assert open
+        closed: Closed[int] = Closed[bool](False, True)
+        assert closed
+        closed_open: ClosedOpen[int] = ClosedOpen[bool](False, True)
+        assert closed_open
+        open_closed: OpenClosed[int] = OpenClosed[bool](False, True)
+        assert open_closed
+
+    def test_interval_without_none(self) -> None:
+        """
+        type checkers should be satisfied that the start and stop of an Interval[int] are ints and not None
+        """
+        start_1: int = Open(1, 2).start
+        assert start_1 == 1
+        stop_1: int = Open(1, 2).stop
+        assert stop_1 == 2
+
+        start_2: int = Closed(1, 2).start
+        assert start_2 == 1
+        stop_2: int = Closed(1, 2).stop
+        assert stop_2 == 2
+
+        start_3: int = OpenClosed(1, 2).start
+        assert start_3 == 1
+        stop_3: int = OpenClosed(1, 2).stop
+        assert stop_3 == 2
+
+        start_4: int = ClosedOpen(1, 2).start
+        assert start_4 == 1
+        stop_4: int = ClosedOpen(1, 2).stop
+        assert stop_4 == 2
+
+    def test_interval_with_none(self) -> None:
+        """
+        type checkers should be satisfied that the start and stop of an Interval[int | None] should be optional ints
+        """
+        start_1: int | None = Open(None, 2).start
+        assert start_1 is None
+        stop_1: int | None = Open(None, 2).stop
+        assert stop_1 == 2
+
+        start_2: int | None = Closed(None, 2).start
+        assert start_2 is None
+        stop_2: int | None = Closed(None, 2).stop
+        assert stop_2 == 2
+
+        start_3: int | None = OpenClosed(None, 2).start
+        assert start_3 is None
+        stop_3: int | None = OpenClosed(None, 2).stop
+        assert stop_3 == 2
+
+        start_4: int | None = ClosedOpen(None, 2).start
+        assert start_4 is None
+        stop_4: int | None = ClosedOpen(None, 2).stop
+        assert stop_4 == 2
+
+    def test_half_bounded_interval(self) -> None:
+        """
+        type checkers should be satisfied that intervals with "missing" bounds are allowed
+        as bounded intervals with None
+        """
+        open_left: Open[int | None] = LeftOpen(0)
+        assert open_left
+        open_right: Open[int | None] = RightOpen(0)
+        assert open_right
+        open_all: Open[int | None] = UNBOUNDED
+        assert open_all
+
+        closed_left: Closed[int | None] = LeftClosed(0)
+        assert closed_left
+        closed_right: Closed[int | None] = RightClosed(0)
+        assert closed_right
+        closed_all: Closed[int | None] = UNBOUNDED
+        assert closed_all
+
+        open_closed_left: OpenClosed[int | None] = LeftOpen(0)
+        assert open_closed_left
+        open_closed_right: OpenClosed[int | None] = RightClosed(0)
+        assert open_closed_right
+        open_closed_all: OpenClosed[int | None] = UNBOUNDED
+        assert open_closed_all
+
+        closed_open_left: ClosedOpen[int | None] = RightOpen(0)
+        assert closed_open_left
+        closed_open_right: ClosedOpen[int | None] = RightOpen(0)
+        assert closed_open_right
+        closed_open_all: ClosedOpen[int | None] = UNBOUNDED
+        assert closed_open_all
+
+    def test_interval_set(self) -> None:
+        """
+        type checkers should be satisfied result IntervalSet[int] is a valid IntervalSet[int | float]
+        since ints are ints | floats
+        """
+        open: OpenSet[int | float] = OpenSet[int]((Open(0, 1), Open(2, 3)))
+        assert open
+        closed: ClosedSet[int | float] = ClosedSet[int]((Closed(0, 1), Closed(2, 3)))
+        assert closed
+        closed_open: ClosedOpenSet[int | float] = ClosedOpenSet[int]((ClosedOpen(0, 1), ClosedOpen(2, 3)))
+        assert closed_open
+        open_closed: OpenClosedSet[int | float] = OpenClosedSet[int]((OpenClosed(0, 1), OpenClosed(2, 3)))
+        assert open_closed
+        interval_set: IntervalSet[int | float] = IntervalSet[int]((Open(0, 1), Open(2, 3)))
+        assert interval_set
+
+
+class TestIntervalOrEmpty:
+    def test_interval_reversed(self) -> None:
+        assert Open.or_empty(1, 0) == EMPTY
+        assert Closed.or_empty(1, 0) == EMPTY
+        assert OpenClosed.or_empty(1, 0) == EMPTY
+        assert ClosedOpen.or_empty(1, 0) == EMPTY
+
+    def test_interval_reversed_exact_match(self) -> None:
+        assert_exact_match(Open.or_empty(1, 0), ~Closed(None, None))
+        assert_exact_match(Closed.or_empty(1, 0), ~Open(None, None))
+        assert_exact_match(OpenClosed.or_empty(1, 0), ~OpenClosed(None, None))
+        assert_exact_match(ClosedOpen.or_empty(1, 0), ~ClosedOpen(None, None))
+
+    def test_interval(self) -> None:
+        assert_exact_match(Open.or_empty(0, 1), Open(0, 1))
+        assert_exact_match(Closed.or_empty(0, 1), Closed(0, 1))
+        assert_exact_match(OpenClosed.or_empty(0, 1), OpenClosed(0, 1))
+        assert_exact_match(ClosedOpen.or_empty(0, 1), ClosedOpen(0, 1))
+
+
+class TestIntervalEquals:
+    def test_interval(self, interval_class: type[IntervalType[int]]) -> None:
+        assert interval_class(0, 1) == interval_class(0, 1)
+
+    def test_interval_unbounded(self) -> None:
+        assert Open(None, 0) == ClosedOpen(None, 0)
+        assert Closed(None, 0) == OpenClosed(None, 0)
+        assert Open(0, None) == OpenClosed(0, None)
+        assert Closed(0, None) == ClosedOpen(0, None)
+        assert Open(None, None) == ClosedOpen(None, None)
+
+    def test_interval_set(self) -> None:
+        assert OpenSet((Open(0, 1), Open(2, 3))) == OpenSet((Open(0, 1), Open(2, 3)))
+        assert ClosedSet((Closed(0, 1), Closed(2, 3))) == ClosedSet((Closed(0, 1), Closed(2, 3)))
+        assert ClosedOpenSet((ClosedOpen(0, 1), ClosedOpen(2, 3))) == ClosedOpenSet(
+            (ClosedOpen(0, 1), ClosedOpen(2, 3))
+        )
+        assert OpenClosedSet((OpenClosed(0, 1), OpenClosed(2, 3))) == OpenClosedSet(
+            (OpenClosed(0, 1), OpenClosed(2, 3))
+        )
+        assert IntervalSet((Open(0, 1), Open(2, 3))) == IntervalSet((Open(0, 1), Open(2, 3)))
+
+
+class TestIntervalHash:
+    def test_interval(self, interval_class: type[IntervalType[int]]) -> None:
+        assert hash(interval_class(0, 1)) == hash(interval_class(0, 1))
+
+    def test_interval_set(self) -> None:
+        assert hash(OpenSet((Open(0, 1), Open(2, 3)))) == hash(OpenSet((Open(0, 1), Open(2, 3))))
+        assert hash(ClosedSet((Closed(0, 1), Closed(2, 3)))) == hash(ClosedSet((Closed(0, 1), Closed(2, 3))))
+        assert hash(ClosedOpenSet((ClosedOpen(0, 1), ClosedOpen(2, 3)))) == hash(
+            ClosedOpenSet((ClosedOpen(0, 1), ClosedOpen(2, 3)))
+        )
+        assert hash(OpenClosedSet((OpenClosed(0, 1), OpenClosed(2, 3)))) == hash(
+            OpenClosedSet((OpenClosed(0, 1), OpenClosed(2, 3)))
+        )
+        assert hash(IntervalSet((Open(0, 1), Open(2, 3)))) == hash(IntervalSet((Open(0, 1), Open(2, 3))))
+
+
+class TestIntervalLen:
+    def test_empty(self) -> None:
+        assert len(EMPTY) == 0
+
+    def test_interval(self, interval_class: type[IntervalType[int | None]]) -> None:
+        assert len(interval_class(0, 1)) == 1
+        assert len(interval_class(None, 0)) == 1
+        assert len(interval_class(0, None)) == 1
+        assert len(interval_class(None, None)) == 1
+
+    def test_interval_set_two(self) -> None:
+        assert len(OpenSet([Open(0, 1), Open(2, 3)])) == 2
+        assert len(ClosedSet([Closed(0, 1), Closed(2, 3)])) == 2
+        assert len(ClosedOpenSet([ClosedOpen(0, 1), ClosedOpen(2, 3)])) == 2
+        assert len(OpenClosedSet([OpenClosed(0, 1), OpenClosed(2, 3)])) == 2
+        assert len(IntervalSet([Open(0, 1), Open(2, 3)])) == 2
+
+    def test_interval_set_three(self) -> None:
+        assert len(OpenSet([Open(0, 1), Open(2, 3), Open(4, 5)])) == 3
+        assert len(ClosedSet([Closed(0, 1), Closed(2, 3), Closed(4, 5)])) == 3
+        assert len(ClosedOpenSet([ClosedOpen(0, 1), ClosedOpen(2, 3), ClosedOpen(4, 5)])) == 3
+        assert len(OpenClosedSet([OpenClosed(0, 1), OpenClosed(2, 3), OpenClosed(4, 5)])) == 3
+        assert len(IntervalSet([Open(0, 1), Open(2, 3), Open(4, 5)])) == 3
+
+    def test_interval_set_three_unbounded(self) -> None:
+        assert len(OpenSet([Open(0, 1), Open(2, 3), Open(4, None)])) == 3
+        assert len(ClosedSet([Closed(0, 1), Closed(2, 3), Closed(4, None)])) == 3
+        assert len(ClosedOpenSet([ClosedOpen(0, 1), ClosedOpen(2, 3), ClosedOpen(4, None)])) == 3
+        assert len(OpenClosedSet([OpenClosed(0, 1), OpenClosed(2, 3), OpenClosed(4, None)])) == 3
+        assert len(IntervalSet([Open(0, 1), Open(2, 3), Open(4, None)])) == 3
+
+
+class TestIntervalBool:
+    def test_empty(self) -> None:
+        assert not EMPTY
+
+    def test_interval(self, interval_class: type[IntervalType[int | None]]) -> None:
+        assert interval_class(0, 1)
+        assert interval_class(None, 0)
+        assert interval_class(0, None)
+        assert interval_class(None, None)
+
+    def test_interval_set_two(self) -> None:
+        assert OpenSet([Open(0, 1), Open(2, 3)])
+        assert ClosedSet([Closed(0, 1), Closed(2, 3)])
+        assert ClosedOpenSet([ClosedOpen(0, 1), ClosedOpen(2, 3)])
+        assert OpenClosedSet([OpenClosed(0, 1), OpenClosed(2, 3)])
+        assert IntervalSet([Open(0, 1), Open(2, 3)])
+
+
+class TestIntervalIntervals:
+    def test_empty(self) -> None:
+        assert EMPTY.intervals == ()
+
+    def test_interval(self, interval_class: type[IntervalType[int]]) -> None:
+        assert interval_class(1, 2).intervals == (interval_class(1, 2),)
+
+    def test_interval_set(self) -> None:
+        assert IntervalSet([Open(0, 1), Closed(2, 3), Open(4, 5)]).intervals == (Open(0, 1), Closed(2, 3), Open(4, 5))
+
+
+class TestIntervalContains:
+    def test_empty(self) -> None:
+        assert 1 not in EMPTY
+        assert "a" not in EMPTY
+        assert object() not in EMPTY
+        assert None not in EMPTY
+
+    def test_interval(self) -> None:
+        assert 0 not in Open(1, 3)
+        assert 1 not in Open(1, 3)
+        assert 2 in Open(1, 3)
+        assert 3 not in Open(1, 3)
+        assert 4 not in Open(1, 3)
+
+        assert 0 not in Closed(1, 3)
+        assert 1 in Closed(1, 3)
+        assert 2 in Closed(1, 3)
+        assert 3 in Closed(1, 3)
+        assert 4 not in Closed(1, 3)
+
+        assert 0 not in OpenClosed(1, 3)
+        assert 1 not in OpenClosed(1, 3)
+        assert 2 in OpenClosed(1, 3)
+        assert 3 in OpenClosed(1, 3)
+        assert 4 not in OpenClosed(1, 3)
+
+        assert 0 not in ClosedOpen(1, 3)
+        assert 1 in ClosedOpen(1, 3)
+        assert 2 in ClosedOpen(1, 3)
+        assert 3 not in ClosedOpen(1, 3)
+        assert 4 not in ClosedOpen(1, 3)
+
+    def test_interval_zero_length(self) -> None:
+        assert 0 not in Closed(1, 1)
+        assert 1 in Closed(1, 1)
+        assert 2 not in Closed(1, 1)
+
+    def test_interval_different_types(self) -> None:
+        assert 2.718281828 in Open(1, 3)
+        assert "a" not in Open(1, 3)
+        assert object() not in Open(1, 3)
+        assert None not in Open(1, 3)
+
+    def test_interval_unbounded(self) -> None:
+        assert 5 in Open(None, 10)
+        assert 10 not in Open(None, 10)
+        assert 15 not in Open(None, 10)
+        assert 5 not in Open(10, None)
+        assert 10 not in Open(10, None)
+        assert 15 in Open(10, None)
+        assert 5 in Open(None, None)
+
+    def test_interval_set(self) -> None:
+        assert 0 not in (Open(1, 3) | Closed(5, 7))
+        assert 1 not in (Open(1, 3) | Closed(5, 7))
+        assert 2 in (Open(1, 3) | Closed(5, 7))
+        assert 3 not in (Open(1, 3) | Closed(5, 7))
+        assert 4 not in (Open(1, 3) | Closed(5, 7))
+        assert 5 in (Open(1, 3) | Closed(5, 7))
+        assert 6 in (Open(1, 3) | Closed(5, 7))
+        assert 7 in (Open(1, 3) | Closed(5, 7))
+        assert 8 not in (Open(1, 3) | Closed(5, 7))
+
+        assert 0 in (Closed(None, 1) | ClosedOpen(3, 5) | Open(7, None))
+        assert 1 in (Closed(None, 1) | ClosedOpen(3, 5) | Open(7, None))
+        assert 2 not in (Closed(None, 1) | ClosedOpen(3, 5) | Open(7, None))
+        assert 3 in (Closed(None, 1) | ClosedOpen(3, 5) | Open(7, None))
+        assert 4 in (Closed(None, 1) | ClosedOpen(3, 5) | Open(7, None))
+        assert 5 not in (Closed(None, 1) | ClosedOpen(3, 5) | Open(7, None))
+        assert 6 not in (Closed(None, 1) | ClosedOpen(3, 5) | Open(7, None))
+        assert 7 not in (Closed(None, 1) | ClosedOpen(3, 5) | Open(7, None))
+        assert 8 in (Closed(None, 1) | ClosedOpen(3, 5) | Open(7, None))
+
+
+class TestIntervalIsDisjoint:
+    def test_empty(self) -> None:
+        assert EMPTY.isdisjoint()
+        assert EMPTY.isdisjoint(EMPTY)
+        assert EMPTY.isdisjoint(EMPTY, EMPTY)
+        assert EMPTY.isdisjoint(Open(0, 1), Open(2, 3))
+        assert EMPTY.isdisjoint(Open(None, None))
+
+    def test_interval(self) -> None:
+        assert Open(1, 2).isdisjoint()
+        assert Open(1, 2).isdisjoint(EMPTY)
+        assert Open(1, 2).isdisjoint(Open(3, 4))
+        assert Open(1, 2).isdisjoint(Open(3, 4), Open(5, 6))
+        assert Open(1, 2).isdisjoint(Open(2, 3), Open(3, 4))
+        assert not Open(1, 3).isdisjoint(Open(2, 4))
+        assert not Open(1, 2).isdisjoint(Open(3, 5), Open(4, 6))
+        assert not Closed(1, 2).isdisjoint(Closed(2, 3))
+        assert Closed(1, 2).isdisjoint(Open(2, 3))
+
+    def test_interval_unbounded(self) -> None:
+        assert Open(None, 0).isdisjoint(Open(1, None))
+        assert not Open(None, 0).isdisjoint(Open(None, 1))
+        assert not Open(None, None).isdisjoint(Open(0, 1))
+
+    def test_interval_set(self) -> None:
+        assert (Open(1, 2) | Open(3, 4)).isdisjoint()
+        assert (Open(1, 2) | Open(3, 4)).isdisjoint(EMPTY)
+        assert (Open(1, 2) | Open(5, 6)).isdisjoint(Open(3, 4))
+        assert (Open(1, 2) | Open(5, 6)).isdisjoint(Open(3, 4) | Open(7, 8))
+        assert (Open(1, 2) | Open(5, 6)).isdisjoint(Open(3, 4) | Open(7, 8), Open(2, 3) | Open(6, 7))
+        assert not (Open(1, 2) | Open(5, 6)).isdisjoint(Open(3, 4) | Open(7, 8), Open(1, 3) | Open(6, 7))
+        assert not (Open(1, 2) | Open(5, 6)).isdisjoint(Open(3, 4) | ClosedOpen(7, 8), Open(2, 3) | OpenClosed(6, 7))
+
+
+class TestIntervalIsSubset:
+    def test_empty(self) -> None:
+        assert EMPTY <= EMPTY
+        assert EMPTY <= Open(0, 1)
+
+    def test_interval(self) -> None:
+        assert Open(1, 2) <= Open(0, 3)
+        assert Open(1, 2) <= Open(1, 2)
+        assert Open(1, 2) <= Closed(1, 2)
+        assert not Closed(1, 2) <= Open(1, 2)
+
+    def test_interval_unbounded(self) -> None:
+        assert Open(1, 2) <= Open(None, 3)
+        assert Open(None, 2) <= Open(None, 3)
+        assert not Open(None, 2) <= Open(0, 3)
+        assert Open(None, 2) <= Open(None, None)
+
+    def test_interval_set(self) -> None:
+        assert Open(1, 2) <= Closed(1, 2) | Open(3, 4)
+        assert Open(1, 2) | Open(3, 4) <= Closed(1, 2) | Open(3, 4)
+        assert Open(1, 2) | Open(3, 4) <= Closed(None, 2) | Open(3, 4)
+        assert not Open(1, 2) | Open(3, 5) <= Closed(None, 2) | Open(3, 4)
+
+
+class TestIntervalIsProperSubset:
+    def test_empty(self) -> None:
+        assert not EMPTY < EMPTY
+        assert EMPTY < Open(0, 1)
+
+    def test_interval(self) -> None:
+        assert Open(1, 2) < Open(0, 3)
+        assert not Open(1, 2) < Open(1, 2)
+        assert Open(1, 2) < Closed(1, 2)
+        assert not Closed(1, 2) < Open(1, 2)
+
+    def test_interval_unbounded(self) -> None:
+        assert Open(1, 2) < Open(None, 3)
+        assert Open(None, 2) < Open(None, 3)
+        assert not Open(None, 2) < Open(None, 2)
+        assert not Open(None, 2) < Open(0, 3)
+        assert Open(None, 2) < Open(None, None)
+
+    def test_interval_set(self) -> None:
+        assert Open(1, 2) < Closed(1, 2) | Open(3, 4)
+        assert Open(1, 2) | Open(3, 4) < Closed(1, 2) | Open(3, 4)
+        assert not Open(1, 2) | Open(3, 4) < Open(1, 2) | Open(3, 4)
+        assert Open(1, 2) | Open(3, 4) < Closed(None, 2) | Open(3, 4)
+        assert not Open(1, 2) | Open(3, 5) < Closed(None, 2) | Open(3, 4)
+
+
+class TestIntervalIsSuperset:
+    def test_empty(self) -> None:
+        assert EMPTY >= EMPTY
+        assert Open(0, 1) >= EMPTY
+
+    def test_interval(self) -> None:
+        assert Open(0, 3) >= Open(1, 2)
+        assert Open(1, 2) >= Open(1, 2)
+        assert Closed(1, 2) >= Open(1, 2)
+        assert not Open(1, 2) >= Closed(1, 2)
+
+    def test_interval_unbounded(self) -> None:
+        assert Open(None, 3) >= Open(1, 2)
+        assert Open(None, 3) >= Open(None, 2)
+        assert not Open(0, 3) >= Open(None, 2)
+        assert Open(None, None) >= Open(None, 2)
+
+    def test_interval_set(self) -> None:
+        assert Closed(1, 2) | Open(3, 4) >= Open(1, 2)
+        assert Closed(1, 2) | Open(3, 4) >= Open(1, 2) | Open(3, 4)
+        assert Closed(None, 2) | Open(3, 4) >= Open(1, 2) | Open(3, 4)
+        assert not Closed(None, 2) | Open(3, 4) >= Open(1, 2) | Open(3, 5)
+
+
+class TestIntervalIsProperSuperset:
+    def test_empty(self) -> None:
+        assert not EMPTY > EMPTY
+        assert Open(0, 1) > EMPTY
+
+    def test_interval(self) -> None:
+        assert Open(0, 3) > Open(1, 2)
+        assert not Open(1, 2) > Open(1, 2)
+        assert Closed(1, 2) > Open(1, 2)
+        assert not Open(1, 2) > Closed(1, 2)
+
+    def test_interval_unbounded(self) -> None:
+        assert Open(None, 3) > Open(1, 2)
+        assert Open(None, 3) > Open(None, 2)
+        assert not Open(None, 2) > Open(None, 2)
+        assert not Open(0, 3) > Open(None, 2)
+        assert Open(None, None) > Open(None, 2)
+
+    def test_interval_set(self) -> None:
+        assert Closed(1, 2) | Open(3, 4) > Open(1, 2)
+        assert Closed(1, 2) | Open(3, 4) > Open(1, 2) | Open(3, 4)
+        assert not Open(1, 2) | Open(3, 4) > Open(1, 2) | Open(3, 4)
+        assert Closed(None, 2) | Open(3, 4) > Open(1, 2) | Open(3, 4)
+        assert not Closed(None, 2) | Open(3, 4) > Open(1, 2) | Open(3, 5)
+
+
+class TestIntervalUnion:
+    def test_empty(self) -> None:
+        assert EMPTY | EMPTY == EMPTY
+        assert Open(0, 1) | EMPTY == Open(0, 1)
+        assert Closed(0, 2) | EMPTY == Closed(0, 2)
+        assert Closed(0, 2) | Open(4, 6) | EMPTY == Closed(0, 2) | Open(4, 6)
+
+    def test_interval(self) -> None:
+        assert Open(0, 1) | Open(2, 3) == OpenSet([Open(0, 1), Open(2, 3)])
+        assert Open(0, 1) | Open(1, 2) == OpenSet([Open(0, 1), Open(1, 2)])
+        assert Open(0, 1) | ClosedOpen(1, 2) == Open(0, 2)
+        assert Open(0, 2) | Open(1, 3) == Open(0, 3)
+        assert Open(0, 3) | Open(1, 2) == Open(0, 3)
+        assert Open(0, 3) | Open(1, 3) == Open(0, 3)
+        assert Open(0, 3) | OpenClosed(1, 3) == OpenClosed(0, 3)
+
+    def test_interval_unbounded(self) -> None:
+        assert Open(None, None) | Open(2, 3) == Open(None, None)
+        assert Open(None, None) | Open(1, 2) == Open(None, None)
+        assert Open(None, None) | ClosedOpen(1, 2) == Open(None, None)
+        assert Open(None, None) | Open(1, 3) == Open(None, None)
+        assert Open(None, None) | Open(1, 2) == Open(None, None)
+        assert Open(None, None) | Open(1, 3) == Open(None, None)
+        assert Open(None, None) | OpenClosed(1, 3) == Open(None, None)
+
+    def test_interval_set(self) -> None:
+        assert IntervalSet([Open(0, 1), Open(4, 5)]) | IntervalSet([Open(2, 3), Open(6, 7)]) == IntervalSet(
+            [Open(0, 1), Open(2, 3), Open(4, 5), Open(6, 7)]
+        )
+        assert IntervalSet([Open(0, 2), Open(3, 6)]) | IntervalSet([Open(1, 4), Open(5, 7)]) == Open(0, 7)
+        assert IntervalSet([Closed(0, 2), Closed(3, 6)]) | IntervalSet([Closed(1, 4), Closed(5, 7)]) == Closed(0, 7)
+
+    def test_multiple_arguments(self) -> None:
+        assert Closed(0, 2).union(Open(1, 3), Open(4, 6), Closed(5, 7)) == IntervalSet(
+            [ClosedOpen(0, 3), OpenClosed(4, 7)]
+        )
+
+
+class TestIntervalIntersection:
+    def test_empty(self) -> None:
+        assert EMPTY & EMPTY == EMPTY
+        assert Open(0, 1) & EMPTY == EMPTY
+        assert Closed(0, 2) & EMPTY == EMPTY
+        assert Closed(0, 3) & Open(2, 4) & EMPTY == EMPTY
+
+    def test_interval(self) -> None:
+        assert Open(0, 1) & Open(2, 3) == EMPTY
+        assert Open(0, 1) & Open(1, 2) == EMPTY
+        assert OpenClosed(0, 1) & ClosedOpen(1, 2) == Closed(1, 1)
+        assert Open(0, 2) & Open(1, 3) == Open(1, 2)
+        assert Open(0, 3) & Open(1, 2) == Open(1, 2)
+        assert Open(0, 3) & Open(1, 3) == Open(1, 3)
+        assert Open(0, 3) & OpenClosed(1, 3) == Open(1, 3)
+
+    def test_interval_unbounded(self) -> None:
+        assert Open(None, None) & Open(2, 3) == Open(2, 3)
+        assert Open(None, None) & Open(1, 2) == Open(1, 2)
+        assert Open(None, None) & ClosedOpen(1, 2) == ClosedOpen(1, 2)
+        assert Open(None, None) & Open(1, 3) == Open(1, 3)
+        assert Open(None, None) & Open(1, 2) == Open(1, 2)
+        assert Open(None, None) & Open(1, 3) == Open(1, 3)
+        assert Open(None, None) & OpenClosed(1, 3) == OpenClosed(1, 3)
+
+    def test_interval_set(self) -> None:
+        assert IntervalSet([Open(0, 1), Open(4, 5)]) & IntervalSet([Open(2, 3), Open(6, 7)]) == EMPTY
+        assert IntervalSet([Open(0, 2), Open(3, 6)]) & IntervalSet([Open(1, 4), Open(5, 7)]) == IntervalSet(
+            [Open(1, 2), Open(3, 4), Open(5, 6)]
+        )
+        assert IntervalSet([Closed(0, 2), Closed(3, 6)]) & IntervalSet([Closed(1, 4), Closed(5, 7)]) == IntervalSet(
+            [Closed(1, 2), Closed(3, 4), Closed(5, 6)]
+        )
+
+    def test_multiple_arguments(self) -> None:
+        assert Closed(0, 10).intersection(Open(None, 6), Open(4, 7), Closed(2, 100)) == Open(4, 6)
+
+    def test_type_narrowing(self) -> None:
+        """
+        type checkers should be satisfied that an intersection between and interval of [int | None] and of [int]
+        should always return an interval of [int]
+        """
+        a: IntervalSet[int] = Open(None, 10) & Open(0, 100)
+        assert a == Open(0, 10)
+
+        # ty does not understand the reversed situation, but the other checkers do:
+
+        b: IntervalSet[int] = Open(0, 100) & Open(None, 10)  # type:ignore[ty:invalid-assignment,unused-ignore]
+        assert b == Open(0, 10)
+
+        c: IntervalSet[int] = Open(None, 10).intersection(Closed(0, 100), Open(-50, 50))
+        assert c == ClosedOpen(0, 10)
+
+        # ty does not understand the reversed situation, but the other checkers do:
+
+        d: IntervalSet[int] = Closed(0, 100).intersection(Open(None, 10), Open(-50, 50))  # type:ignore[ty:invalid-assignment,unused-ignore]
+        assert d == ClosedOpen(0, 10)
+
+
+class TestIntervalDifference:
+    def test_empty(self) -> None:
+        assert EMPTY - EMPTY == EMPTY
+        assert Open(0, 1) - EMPTY == Open(0, 1)
+        assert Open(0, None) - EMPTY == Open(0, None)
+        assert Open(None, 0) - EMPTY == Open(None, 0)
+        assert Open(None, None) - EMPTY == Open(None, None)
+        assert EMPTY - Open(0, 1) == EMPTY
+        assert EMPTY - Open(0, None) == EMPTY
+        assert EMPTY - Open(None, 0) == EMPTY
+        assert EMPTY - Open(None, None) == EMPTY
+
+    def test_match_intersection_of_complement(self) -> None:
+        assert_exact_match(Open(0, 1) - EMPTY, Open(0, 1) & ~EMPTY)
+        assert_exact_match(Open(0, 1) - EMPTY, Open(0, 1) & ~EMPTY)
+        assert_exact_match(Open(0, None) - EMPTY, Open(0, None) & ~EMPTY)
+        assert_exact_match(Open(None, 0) - EMPTY, Open(None, 0) & ~EMPTY)
+        assert_exact_match(Open(None, None) - EMPTY, Open(None, None) & ~EMPTY)
+        assert_exact_match(EMPTY - Open(0, 1), EMPTY & ~Open(0, 1))
+        assert_exact_match(EMPTY - Open(0, None), EMPTY & ~Open(0, None))
+        assert_exact_match(EMPTY - Open(None, 0), EMPTY & ~Open(None, 0))
+        assert_exact_match(EMPTY - Open(None, None), EMPTY & ~Open(None, None))
+
+
+class TestIntervalComplement:
+    def test_empty(self) -> None:
+        assert_exact_match(~EMPTY, Open(None, None))
+        assert_exact_match(EMPTY, ~Open(None, None))
+
+    def test_interval(self) -> None:
+        assert_exact_match(~Open(0, 1), Closed(None, 0) | Closed(1, None))
+        assert_exact_match(Open(0, 1), ~(Closed(None, 0) | Closed(1, None)))
+        assert_exact_match(~Closed(0, 1), Open(None, 0) | Open(1, None))
+        assert_exact_match(Closed(0, 1), ~(Open(None, 0) | Open(1, None)))
+        assert_exact_match(~OpenClosed(0, 1), OpenClosed(None, 0) | OpenClosed(1, None))
+        assert_exact_match(OpenClosed(0, 1), ~(OpenClosed(None, 0) | OpenClosed(1, None)))
+        assert_exact_match(~ClosedOpen(0, 1), ClosedOpen(None, 0) | ClosedOpen(1, None))
+        assert_exact_match(ClosedOpen(0, 1), ~(ClosedOpen(None, 0) | ClosedOpen(1, None)))
+
+    def test_interval_unbound(self) -> None:
+        assert_exact_match(~Open(None, 0), Closed(0, None))
+        assert_exact_match(Open(None, 0), ~Closed(0, None))
+        assert_exact_match(~Closed(None, 0), Open(0, None))
+        assert_exact_match(Closed(None, 0), ~Open(0, None))
+        assert_exact_match(~OpenClosed(None, 0), OpenClosed(0, None))
+        assert_exact_match(OpenClosed(None, 0), ~OpenClosed(0, None))
+        assert_exact_match(~ClosedOpen(None, 0), ClosedOpen(0, None))
+        assert_exact_match(ClosedOpen(None, 0), ~ClosedOpen(0, None))
+
+    def test_interval_infinite(self) -> None:
+        assert_exact_match(~UNBOUNDED, EMPTY)
+        assert_exact_match(~EMPTY, UNBOUNDED)
+
+    def test_interval_set(self) -> None:
+        assert ~(Open(0, 1) | Open(2, 3) | Open(4, 5)) == Closed(None, 0) | Closed(1, 2) | Closed(3, 4) | Closed(
+            5, None
+        )
+        assert Open(0, 1) | Open(2, 3) | Open(4, 5) == ~(
+            Closed(None, 0) | Closed(1, 2) | Closed(3, 4) | Closed(5, None)
+        )
+        assert ~(Closed(0, 1) | Closed(2, 3) | Closed(4, 5)) == Open(None, 0) | Open(1, 2) | Open(3, 4) | Open(5, None)
+        assert Closed(0, 1) | Closed(2, 3) | Closed(4, 5) == ~(Open(None, 0) | Open(1, 2) | Open(3, 4) | Open(5, None))
+        assert ~(OpenClosed(0, 1) | OpenClosed(2, 3) | OpenClosed(4, 5)) == OpenClosed(None, 0) | OpenClosed(
+            1, 2
+        ) | OpenClosed(3, 4) | OpenClosed(5, None)
+        assert OpenClosed(0, 1) | OpenClosed(2, 3) | OpenClosed(4, 5) == ~(
+            OpenClosed(None, 0) | OpenClosed(1, 2) | OpenClosed(3, 4) | OpenClosed(5, None)
+        )
+        assert ~(ClosedOpen(0, 1) | ClosedOpen(2, 3) | ClosedOpen(4, 5)) == ClosedOpen(None, 0) | ClosedOpen(
+            1, 2
+        ) | ClosedOpen(3, 4) | ClosedOpen(5, None)
+        assert ClosedOpen(0, 1) | ClosedOpen(2, 3) | ClosedOpen(4, 5) == ~(
+            ClosedOpen(None, 0) | ClosedOpen(1, 2) | ClosedOpen(3, 4) | ClosedOpen(5, None)
+        )
+
+
+class TestIntervalGetItem:
+    def test_index(self) -> None:
+        assert (Open(0, 1) | Closed(2, 3) | OpenClosed(4, 5))[0] == Open(0, 1)
+        assert (Open(0, 1) | Closed(2, 3) | OpenClosed(4, 5))[1] == Closed(2, 3)
+        assert (Open(0, 1) | Closed(2, 3) | OpenClosed(4, 5))[2] == OpenClosed(4, 5)
+        assert (Open(0, 1) | Closed(2, 3) | OpenClosed(4, 5))[-3] == Open(0, 1)
+        assert (Open(0, 1) | Closed(2, 3) | OpenClosed(4, 5))[-2] == Closed(2, 3)
+        assert (Open(0, 1) | Closed(2, 3) | OpenClosed(4, 5))[-1] == OpenClosed(4, 5)
+        assert Open(0, 1)[0] == Open(0, 1)
+        assert Open(0, 1)[-1] == Open(0, 1)
+
+    def test_slice(self) -> None:
+        a = Open(0, 1) | OpenClosed(2, 3) | ClosedOpen(4, 5) | Closed(6, 7) | Open(8, 9)
+
+        assert a[:] == a[0:] == a[:6] == a[:10] == a
+        assert a[1:] == OpenClosed(2, 3) | ClosedOpen(4, 5) | Closed(6, 7) | Open(8, 9)
+        assert a[2:] == ClosedOpen(4, 5) | Closed(6, 7) | Open(8, 9)
+        assert a[-1:] == Open(8, 9)
+        assert a[-2:] == Closed(6, 7) | Open(8, 9)
+        assert a[1:4] ==  OpenClosed(2, 3) | ClosedOpen(4, 5) | Closed(6, 7)
+        assert a[2:10] ==  ClosedOpen(4, 5) | Closed(6, 7) | Open(8, 9)
+        assert a[::2] ==  Open(0, 1) | ClosedOpen(4, 5) | Open(8, 9)
+        assert a[1::2] ==  OpenClosed(2, 3) | Closed(6, 7)
+        assert a[::-2] ==  Open(0, 1) | ClosedOpen(4, 5) | Open(8, 9)
+        assert a[::-3] ==  OpenClosed(2, 3) | Open(8, 9)
+        assert a[-2::-2] == OpenClosed(2, 3) | Closed(6, 7)
+        assert a[-2:-4:-2] ==  Closed(6, 7)
+        assert a[::-1] ==  a
+        assert a[:-3:-1] ==  Closed(6, 7) | Open(8, 9)
+        assert a[:-4:-2] ==  ClosedOpen(4, 5) | Open(8, 9)
+
+
+
+class TestIntervalRepr:
+    def test_empty(self) -> None:
+        assert repr(EMPTY) == "Empty()"
+
+    def test_interval(self) -> None:
+        assert repr(Open(0, 1)) == "Open(0, 1)"
+        assert repr(Closed(0, 1)) == "Closed(0, 1)"
+        assert repr(OpenClosed(0, 1)) == "OpenClosed(0, 1)"
+        assert repr(ClosedOpen(0, 1)) == "ClosedOpen(0, 1)"
+
+    def test_interval_half_bounded(self) -> None:
+        assert repr(LeftOpen(1)) == "LeftOpen(1)"
+        assert repr(LeftClosed(1)) == "LeftClosed(1)"
+        assert repr(RightOpen(1)) == "RightOpen(1)"
+        assert repr(RightClosed(1)) == "RightClosed(1)"
+
+    def test_interval_unbounded(self) -> None:
+        assert repr(Unbounded()) == "Unbounded()"
+
+    def test_interval_set(self) -> None:
+        assert (
+            repr(IntervalSet([ClosedOpen(0, 1), ClosedOpen(2, 3)]))
+            == "ClosedOpenSet([ClosedOpen(0, 1), ClosedOpen(2, 3)])"
+        )
+
+    def test_interval_set_unbound(self) -> None:
+        assert (
+            repr(IntervalSet([ClosedOpen(None, 1), ClosedOpen(2, 3)]))
+            == "ClosedOpenSet([RightOpen(1), ClosedOpen(2, 3)])"
+        )
+        assert (
+            repr(IntervalSet([ClosedOpen(0, 1), ClosedOpen(2, None)]))
+            == "ClosedOpenSet([ClosedOpen(0, 1), LeftClosed(2)])"
+        )
+
+
+class TestIntervalStr:
+    def test_empty(self) -> None:
+        assert str(EMPTY) == "⟨;⟩"
+
+    def test_interval(self) -> None:
+        assert str(Open(0, 1)) == "(0 ; 1)"
+        assert str(Closed(0, 1)) == "[0 ; 1]"
+        assert str(OpenClosed(0, 1)) == "(0 ; 1]"
+        assert str(ClosedOpen(0, 1)) == "[0 ; 1)"
+
+    def test_interval_unbounded(self) -> None:
+        assert str(Open(None, 1)) == "⟨-inf ; 1)"
+        assert str(Closed(None, 1)) == "⟨-inf ; 1]"
+        assert str(OpenClosed(None, 1)) == "⟨-inf ; 1]"
+        assert str(ClosedOpen(None, 1)) == "⟨-inf ; 1)"
+        assert str(Open(0, None)) == "(0 ; +inf⟩"
+        assert str(Closed(0, None)) == "[0 ; +inf⟩"
+        assert str(OpenClosed(0, None)) == "(0 ; +inf⟩"
+        assert str(ClosedOpen(0, None)) == "[0 ; +inf⟩"
+        assert str(Open(None, None)) == "⟨-inf ; +inf⟩"
+        assert str(Closed(None, None)) == "⟨-inf ; +inf⟩"
+        assert str(OpenClosed(None, None)) == "⟨-inf ; +inf⟩"
+        assert str(ClosedOpen(None, None)) == "⟨-inf ; +inf⟩"
+
+    def test_interval_set(self) -> None:
+        assert str(IntervalSet()) == "⟨;⟩"
+        assert str(IntervalSet([Open(0, 1)])) == "(0 ; 1)"
+        assert str(IntervalSet([Open(0, 1), Closed(2, 3)])) == "(0 ; 1) | [2 ; 3]"
+        assert str(IntervalSet([Open(0, 1), Closed(2, 3), ClosedOpen(4, 5)])) == "(0 ; 1) | [2 ; 3] | [4 ; 5)"
+        assert str(IntervalSet([Open(None, 1), Closed(2, 3), ClosedOpen(4, 5)])) == "⟨-inf ; 1) | [2 ; 3] | [4 ; 5)"
+        assert str(IntervalSet([Open(0, 1), Closed(2, 3), ClosedOpen(4, None)])) == "(0 ; 1) | [2 ; 3] | [4 ; +inf⟩"
+        assert str(IntervalSet([Closed(0, 1), Open(2, 3), OpenClosed(4, None)])) == "[0 ; 1] | (2 ; 3) | (4 ; +inf⟩"

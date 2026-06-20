@@ -1,4 +1,4 @@
-env_list = ["lint", "3.12", "3.13", "3.14"]
+env_list = ["lint", "3.10", "3.11", "3.12", "3.13", "3.14"]
 
 [env_run_base]
 description = "run the test suite with pytest"
@@ -9,15 +9,9 @@ commands = [["pytest", { replace = "posargs", default = ["test"], extend = true 
 
 [env.lint]
 description = "run linters"
-skip_install = true
-deps = [
-    "pytest>=9",
-    "ruff>=0.15",
-    "mypy>=2.1",
-    "ty>=0.0.42",
-    "pyright>=1.1",
-    "pyrefly>=1",
-]
+base_python = "python3.14"
+package = "skip"
+dependency_groups = ["dev"]
 commands = [
     ["ruff", "check", { replace = "posargs", default = ["."], extend = true }],
     ["mypy", { replace = "posargs", default = ["src", "test"], extend = true }],

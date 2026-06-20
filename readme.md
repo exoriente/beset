@@ -50,7 +50,7 @@ The half-open `ClosedOpen` interval includes its lower bound but not its upper o
 
 The `Open` interval excludes both its bounds and the `OpenClosed` interval includes its upper bound, but not its lower one. 
 
-You can also create the required interval dynamically using their `Interval` superclass.
+You can also create the required interval dynamically using their `Interval` base class.
 
 ```python
 >>> from beset import Interval
@@ -121,7 +121,7 @@ Taking the complement of an interval can introduce `INF` values.
 Getting rid of the `Infinity` types can be accomplished using intersection.
 
 ```python
->>> domain = Closed[-100, 100] 
+>>> domain = Closed(-100, 100)
 >>> y =  domain & x
 >>> print(y)
 [-100 : 0> | <10 : 100]
@@ -141,12 +141,12 @@ Using `mypy` you need to be more careful using union types when instantiating in
 In `ty` and other checkers this goes better.
 
 ```python
->>> c = ClosedOpen(7, INF)  # type of c according to mypy: ClosedOpen[int | Infinity]
->>> r = c & domain          # type of r according to mypy: ClosedOpen[int]
+>>> c = ClosedOpen(7, INF)  # type of c according to ty: ClosedOpen[int | Infinity]
+>>> r = c & domain          # type of r according to ty: ClosedOpen[int]
 ```
 
 When determining the type of the interval `mypy` uses the "closest" parent class common to the different types.
-In this `mypy` uses `Sortable`, the protocol class used as bound for `Interval`. Other checkers, like `ty`, use a union type instead, which is more convenient for type narrowing by using intersection.
+In this case `mypy` uses `Sortable`, the protocol class used as bound for `Interval`. Other checkers, like `ty`, use a union type instead, which is more convenient for type narrowing by using intersection.
 
 As a workaround you can force `mypy` to do the same by being more explicit.
 
