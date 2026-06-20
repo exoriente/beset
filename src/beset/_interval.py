@@ -273,14 +273,30 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
             case int() as i:
                 return self.intervals[i]
             case slice() as s:
-                start = len(self) + s.start if s.start < 0 else s.start
-                stop = len(self) + s.stop if s.stop < 0 else s.stop
-                new_bounds = tuple(chain.from_iterable(
-                    (self._bounds[i * 2], self._bounds[i * 2 + 1]) for i in range(start, stop, s.step)
-                ))
+                length = len(self)
+                start = 0 if s.start is None else length + s.start if s.start < 0 else s.start
+                stop = length if s.stop is None else length + s.stop if s.stop < 0 else s.stop
 
+                start = max(min(start, length), 0)
+                stop = max(min(stop, length), 0)
+                step = 1 if s.step is None else s.step
 
+                if step < 0:
+                    step = -step
+                    start, stop = stop + 1, start + 1
+                    start += (start - stop) % step
 
+                no_of_bounds = len(self._bounds)
+                new_bounds = tuple(
+                    chain.from_iterable(
+                        self._bounds[max(b := (i * 2 - self._odd), 0) : min(b + 2, no_of_bounds)]
+                        for i in range(start, stop, step)
+                    )
+                )
+
+                new_odd = self._odd and start == 0
+
+                return create_instance((new_odd, new_bounds))
 
     def __repr__(self) -> str:
         contents = ", ".join(bounds_to_repr(a, b) for a, b in self._bound_pairs())

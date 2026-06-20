@@ -769,6 +769,36 @@ class TestIntervalComplement:
         )
 
 
+class TestIntervalGetItem:
+    def test_index(self) -> None:
+        assert (Open(0, 1) | Closed(2, 3) | OpenClosed(4, 5))[0] == Open(0, 1)
+        assert (Open(0, 1) | Closed(2, 3) | OpenClosed(4, 5))[1] == Closed(2, 3)
+        assert (Open(0, 1) | Closed(2, 3) | OpenClosed(4, 5))[2] == OpenClosed(4, 5)
+        assert (Open(0, 1) | Closed(2, 3) | OpenClosed(4, 5))[-3] == Open(0, 1)
+        assert (Open(0, 1) | Closed(2, 3) | OpenClosed(4, 5))[-2] == Closed(2, 3)
+        assert (Open(0, 1) | Closed(2, 3) | OpenClosed(4, 5))[-1] == OpenClosed(4, 5)
+        assert Open(0, 1)[0] == Open(0, 1)
+        assert Open(0, 1)[-1] == Open(0, 1)
+
+    def test_slice(self) -> None:
+        a = Open(0, 1) | OpenClosed(2, 3) | ClosedOpen(4, 5) | Closed(6, 7) | Open(8, 9)
+
+        # assert a[:] == a[0:] == a[:6] == a[:10] == a
+        # assert a[1:] == OpenClosed(2, 3) | ClosedOpen(4, 5) | Closed(6, 7) | Open(8, 9)
+        # assert a[2:] == ClosedOpen(4, 5) | Closed(6, 7) | Open(8, 9)
+        # assert a[-1:] == Open(8, 9)
+        # assert a[-2:] == Closed(6, 7) | Open(8, 9)
+        # assert a[1:4] ==  OpenClosed(2, 3) | ClosedOpen(4, 5) | Closed(6, 7)
+        # assert a[2:10] ==  ClosedOpen(4, 5) | Closed(6, 7) | Open(8, 9)
+        # assert a[::2] ==  Open(0, 1) | ClosedOpen(4, 5) | Open(8, 9)
+        # assert a[1::2] ==  OpenClosed(2, 3) | Closed(6, 7)
+        assert a[::-2] ==  Open(0, 1) | ClosedOpen(4, 5) | Open(8, 9)
+
+
+
+
+
+
 class TestIntervalRepr:
     def test_empty(self) -> None:
         assert repr(EMPTY) == "Empty()"
