@@ -163,7 +163,7 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
     def __init__(self, intervals: Iterable["IntervalSet[T]"] = ()):
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     @classmethod
     def _construct(cls, intervals: Iterable["IntervalSet[T]"] = ()) -> IntervalData[T]:
@@ -316,7 +316,7 @@ class OpenSet(IntervalSet[T], Generic[T]):
     def __init__(self, intervals: Iterable["Open[T]"] = ()):
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
 
 class ClosedSet(IntervalSet[T], Generic[T]):
@@ -326,7 +326,7 @@ class ClosedSet(IntervalSet[T], Generic[T]):
     def __init__(self, intervals: Iterable["Closed[T]"] = ()):
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
 
 class ClosedOpenSet(IntervalSet[T], Generic[T]):
@@ -336,7 +336,7 @@ class ClosedOpenSet(IntervalSet[T], Generic[T]):
     def __init__(self, intervals: Iterable["ClosedOpen[T]"] = ()):
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
 
 class OpenClosedSet(IntervalSet[T], Generic[T]):
@@ -346,7 +346,7 @@ class OpenClosedSet(IntervalSet[T], Generic[T]):
     def __init__(self, intervals: Iterable["OpenClosed[T]"] = ()):
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
 
 class Interval(IntervalSet[T], Generic[T]):
@@ -359,7 +359,7 @@ class Interval(IntervalSet[T], Generic[T]):
     def __init__(self, start: T, stop: T, start_closed: bool, stop_closed: bool):
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     @classmethod
     def _construct(cls, start: V, stop: V, start_closed: bool, stop_closed: bool) -> IntervalData[V]:  # type:ignore[ty:invalid-method-override,unused-ignore,override]
@@ -385,7 +385,7 @@ class Interval(IntervalSet[T], Generic[T]):
     @staticmethod
     def or_empty(start: V, stop: V) -> "Interval[V] | Empty":
         # abstract
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     def __contains__(self, item: object) -> bool:
         value = (0, item, False)
@@ -405,7 +405,7 @@ class _ConcreteInterval(Interval[T], Generic[T]):
     def __init__(self, start: T, stop: T):
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     @classmethod
     def _construct(cls, start: V, stop: V, allow_empty: bool = False) -> IntervalData[V]:  # type:ignore[ty:invalid-method-override,unused-ignore,override]
@@ -494,7 +494,7 @@ class _LeftBounded(_ConcreteInterval[T], Generic[T]):
     def __init__(self, start: T) -> None:
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     @classmethod
     def _construct(cls, start: V) -> IntervalData[V]:  # type:ignore[ty:invalid-method-override,unused-ignore,override]
@@ -513,7 +513,7 @@ class _RightBounded(_ConcreteInterval[T], Generic[T]):
     def __init__(self, stop: T) -> None:
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     @classmethod
     def _construct(cls, stop: V) -> IntervalData[V]:  # type:ignore[ty:invalid-method-override,unused-ignore,override]
@@ -529,32 +529,32 @@ class _RightBounded(_ConcreteInterval[T], Generic[T]):
 class LeftOpen(_LeftBounded[T | None], Open[T | None], OpenClosed[T | None], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
     @staticmethod
     def or_empty(start: Never, stop: Never) -> Never:  # type:ignore[override,unused-ignore]
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
 
 class RightOpen(_RightBounded[T | None], Open[T | None], ClosedOpen[T | None], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
     @staticmethod
     def or_empty(start: Never, stop: Never) -> Never:  # type:ignore[override,unused-ignore]
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
 
 class LeftClosed(_LeftBounded[T | None], Closed[T | None], ClosedOpen[T | None], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
     @staticmethod
     def or_empty(start: Never, stop: Never) -> Never:  # type:ignore[override,unused-ignore]
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
 
 class RightClosed(_RightBounded[T | None], Closed[T | None], OpenClosed[T | None], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
     @staticmethod
     def or_empty(start: Never, stop: Never) -> Never:  # type:ignore[override,unused-ignore]
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
 
 class Unbounded(LeftOpen[None], RightOpen[None], LeftClosed[None], RightClosed[None]):  # type:ignore[misc,unused-ignore]
     def __init__(self) -> None:
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     @classmethod
     def _construct(cls) -> IntervalData[None]:  # type:ignore[ty:invalid-method-override,unused-ignore,override]
@@ -568,7 +568,7 @@ class Empty(OpenSet[Never], ClosedSet[Never], OpenClosedSet[Never], ClosedOpenSe
     def __init__(self) -> None:
         # not in use, metaclass handles initialization
         # signature provided for IDE detection
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     @classmethod
     def _construct(cls) -> IntervalData[Never]:  # type:ignore[ty:invalid-method-override,unused-ignore,override]

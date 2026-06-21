@@ -103,6 +103,12 @@ class TestIntervalCreation:
         with raises(ValueError):
             Interval(1, 0, True, True)
 
+    def test_interval_half_bounded(self) -> None:
+        assert LeftOpen(None) == UNBOUNDED
+        assert RightOpen(None) == UNBOUNDED
+        assert LeftClosed(None) == UNBOUNDED
+        assert RightClosed(None) == UNBOUNDED
+
     def test_interval_set_restricted(self) -> None:
         assert type(OpenSet([Open(0, 1), Open(2, 3)])) is OpenSet
         assert type(ClosedSet([Closed(0, 1), Closed(2, 3)])) is ClosedSet
@@ -437,6 +443,8 @@ class TestIntervalContains:
         assert "a" not in Open(1, 3)
         assert object() not in Open(1, 3)
         assert None not in Open(1, 3)
+        assert None not in Open(None, 3)
+        assert None not in Open(1, None)
 
     def test_interval_unbounded(self) -> None:
         assert 5 in Open(None, 10)
@@ -467,6 +475,13 @@ class TestIntervalContains:
         assert 6 not in (Closed(None, 1) | ClosedOpen(3, 5) | Open(7, None))
         assert 7 not in (Closed(None, 1) | ClosedOpen(3, 5) | Open(7, None))
         assert 8 in (Closed(None, 1) | ClosedOpen(3, 5) | Open(7, None))
+
+    def test_interval_set_different_types(self) -> None:
+        assert 2.718281828 in Open(0, 1) | Closed(2, 3)
+        assert "a" not in Open(0, 1) | Closed(2, 3)
+        assert object() not in Open(0, 1) | Closed(2, 3)
+        assert None not in Open(0, 1) | Closed(2, 3)
+        assert None not in Open(None, 0) | Closed(1, None)
 
 
 class TestIntervalIsDisjoint:
@@ -526,6 +541,10 @@ class TestIntervalIsSubset:
         assert Open(1, 2) | Open(3, 4) <= Closed(None, 2) | Open(3, 4)
         assert not Open(1, 2) | Open(3, 5) <= Closed(None, 2) | Open(3, 4)
 
+    def test_interval_named_method(self) -> None:
+        assert Open(1, 2).issubset(Closed(1, 2) | Open(3, 4))
+        assert (Open(1, 2) | Open(3, 4)).issubset(Closed(1, 2) | Open(3, 4))
+
 
 class TestIntervalIsProperSubset:
     def test_empty(self) -> None:
@@ -575,6 +594,10 @@ class TestIntervalIsSuperset:
         assert Closed(1, 2) | Open(3, 4) >= Open(1, 2) | Open(3, 4)
         assert Closed(None, 2) | Open(3, 4) >= Open(1, 2) | Open(3, 4)
         assert not Closed(None, 2) | Open(3, 4) >= Open(1, 2) | Open(3, 5)
+
+    def test_interval_named_method(self) -> None:
+        assert Closed(1, 2).issuperset(Open(1, 2))
+        assert (Closed(1, 2) | Open(3, 4)).issuperset(Open(1, 2) | Open(3, 4))
 
 
 class TestIntervalIsProperSuperset:
@@ -712,6 +735,22 @@ class TestIntervalDifference:
         assert EMPTY - Open(None, 0) == EMPTY
         assert EMPTY - Open(None, None) == EMPTY
 
+    def test_interval(self) -> None:
+        assert Open(0, 2) - Open(1, 3) == OpenClosed(0, 1)
+        assert Open(1, 2) - Open(0, 3) == EMPTY
+        assert Open(0, 3) - ClosedOpen(1, 2) == Open(0, 1) | ClosedOpen(2, 3)
+        assert Open(0, 2) - ClosedOpen(None, 1) == ClosedOpen(1, 2)
+        assert Open(None, 2) - ClosedOpen(None, 1) == ClosedOpen(1, 2)
+        assert Unbounded() - ClosedOpen(0, 1) == ClosedOpen(None, 0) | ClosedOpen(1, None)
+
+    def test_interval_set(self) -> None:
+        assert (Closed(0, 2) | Closed(3, 5)) - Closed(1, 4) == ClosedOpen(0, 1) | OpenClosed(4, 5)
+        assert (Closed(0, 2) | Closed(3, 6) | Closed(7, 9)) - (Closed(1, 4) | Closed(5, 8)) == ClosedOpen(0, 1) | Open(
+            4, 5
+        ) | OpenClosed(8, 9)
+        assert (Closed(0, 2) | Closed(3, 5)) - Open(None, 1) == Closed(1, 2) | Closed(3, 5)
+        assert (Closed(None, 2) | Closed(3, 5)) - Open(0, 1) == Closed(None, 0) | Closed(1, 2) | Closed(3, 5)
+
     def test_match_intersection_of_complement(self) -> None:
         assert_exact_match(Open(0, 1) - EMPTY, Open(0, 1) & ~EMPTY)
         assert_exact_match(Open(0, 1) - EMPTY, Open(0, 1) & ~EMPTY)
@@ -722,6 +761,10 @@ class TestIntervalDifference:
         assert_exact_match(EMPTY - Open(0, None), EMPTY & ~Open(0, None))
         assert_exact_match(EMPTY - Open(None, 0), EMPTY & ~Open(None, 0))
         assert_exact_match(EMPTY - Open(None, None), EMPTY & ~Open(None, None))
+
+    def test_interval_named_method(self) -> None:
+        assert Open(0, 2).difference(Open(1, 3)) == OpenClosed(0, 1)
+        assert (Closed(0, 2) | Closed(3, 5)).difference(Closed(1, 4)) == ClosedOpen(0, 1) | OpenClosed(4, 5)
 
 
 class TestIntervalComplement:
@@ -775,6 +818,12 @@ class TestIntervalComplement:
             ClosedOpen(None, 0) | ClosedOpen(1, 2) | ClosedOpen(3, 4) | ClosedOpen(5, None)
         )
 
+    def test_interval_named_method(self) -> None:
+        assert Open(0, 1).complement() == Closed(None, 0) | Closed(1, None)
+        assert (Open(0, 1) | Open(2, 3) | Open(4, 5)).complement() == Closed(None, 0) | Closed(1, 2) | Closed(
+            3, 4
+        ) | Closed(5, None)
+
 
 class TestIntervalGetItem:
     def test_index(self) -> None:
@@ -806,6 +855,17 @@ class TestIntervalGetItem:
         assert a[::-1] == a
         assert a[:-3:-1] == Closed(6, 7) | Open(8, 9)
         assert a[:-4:-2] == ClosedOpen(4, 5) | Open(8, 9)
+        assert a[10:] == EMPTY
+        assert a[:-10] == EMPTY
+
+    def test_empty(self) -> None:
+        assert EMPTY[:] == EMPTY
+        assert EMPTY[0::2] == EMPTY
+        assert EMPTY[-1:0:-1] == EMPTY
+
+    def test_slice_bad_step_size(self) -> None:
+        with raises(ValueError):
+            Open(0, 1)[::0]
 
 
 class TestIntervalRepr:
