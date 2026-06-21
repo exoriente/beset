@@ -29,7 +29,7 @@ type-checks: mypy ty pyright pyrefly
 slotscheck:
 	slotscheck $(source_path)
 
-checks: ruff-check type-checks slotscheck
+    checks: ruff-check type-checks slotscheck
 
 nice: format checks
 
