@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  lint-and-test:
+    name: Python ${{ matrix.python-version }} - Linters & Tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
+
+      - name: Install poetry
+        run: python -m pip install poetry
+
+      - name: Install package and dependencies
+        run: poetry install
+
+      - name: Run ruff check
+        run: poetry run ruff check src/ test/
+
+      - name: Run mypy
+        run: poetry run mypy src/ test/
+
+      - name: Run ty
+        run: poetry run ty check src/ test/
+
+      - name: Run pyright
+        run: poetry run pyright src/ test/
+
+      - name: Run pyrefly
+        run: poetry run pyrefly check src/ test/
+
+      - name: Run slotscheck
+        run: poetry run slotscheck src/
+
+      - name: Run tests
+        run: poetry run pytest
