@@ -387,6 +387,13 @@ class TestIntervalIntervals:
     def test_interval_set(self) -> None:
         assert IntervalSet([Open(0, 1), Closed(2, 3), Open(4, 5)]).intervals == (Open(0, 1), Closed(2, 3), Open(4, 5))
 
+    def test_interval_set_unbounded(self) -> None:
+        assert IntervalSet([Open(None, 1), Closed(2, 3), Open(4, None)]).intervals == (
+            RightOpen(1),
+            Closed(2, 3),
+            LeftOpen(4),
+        )
+
 
 class TestIntervalContains:
     def test_empty(self) -> None:
@@ -788,18 +795,17 @@ class TestIntervalGetItem:
         assert a[2:] == ClosedOpen(4, 5) | Closed(6, 7) | Open(8, 9)
         assert a[-1:] == Open(8, 9)
         assert a[-2:] == Closed(6, 7) | Open(8, 9)
-        assert a[1:4] ==  OpenClosed(2, 3) | ClosedOpen(4, 5) | Closed(6, 7)
-        assert a[2:10] ==  ClosedOpen(4, 5) | Closed(6, 7) | Open(8, 9)
-        assert a[::2] ==  Open(0, 1) | ClosedOpen(4, 5) | Open(8, 9)
-        assert a[1::2] ==  OpenClosed(2, 3) | Closed(6, 7)
-        assert a[::-2] ==  Open(0, 1) | ClosedOpen(4, 5) | Open(8, 9)
-        assert a[::-3] ==  OpenClosed(2, 3) | Open(8, 9)
+        assert a[1:4] == OpenClosed(2, 3) | ClosedOpen(4, 5) | Closed(6, 7)
+        assert a[2:10] == ClosedOpen(4, 5) | Closed(6, 7) | Open(8, 9)
+        assert a[::2] == Open(0, 1) | ClosedOpen(4, 5) | Open(8, 9)
+        assert a[1::2] == OpenClosed(2, 3) | Closed(6, 7)
+        assert a[::-2] == Open(0, 1) | ClosedOpen(4, 5) | Open(8, 9)
+        assert a[::-3] == OpenClosed(2, 3) | Open(8, 9)
         assert a[-2::-2] == OpenClosed(2, 3) | Closed(6, 7)
-        assert a[-2:-4:-2] ==  Closed(6, 7)
-        assert a[::-1] ==  a
-        assert a[:-3:-1] ==  Closed(6, 7) | Open(8, 9)
-        assert a[:-4:-2] ==  ClosedOpen(4, 5) | Open(8, 9)
-
+        assert a[-2:-4:-2] == Closed(6, 7)
+        assert a[::-1] == a
+        assert a[:-3:-1] == Closed(6, 7) | Open(8, 9)
+        assert a[:-4:-2] == ClosedOpen(4, 5) | Open(8, 9)
 
 
 class TestIntervalRepr:

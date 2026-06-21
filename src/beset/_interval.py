@@ -5,12 +5,12 @@ from operator import itemgetter
 from sys import version_info
 from typing import Any, Generic, Literal, TypeVar, cast, overload
 
-if version_info >= (3, 11):
+if version_info >= (3, 11):  # pragma: no cover
     from typing import Never  # type:ignore[attr-defined,unused-ignore]
 else:
     from typing_extensions import Never
 
-if version_info >= (3, 12):
+if version_info >= (3, 12):  # pragma: no cover
     from itertools import batched  # type:ignore[attr-defined,unused-ignore]
 else:
     from beset._itertools import batched  # type:ignore[assignment,unused-ignore]
@@ -102,7 +102,7 @@ def choose_class(
                 case _:
                     return IntervalSet
 
-    return IntervalSet
+    return IntervalSet  # pragma: no cover  # added to satisfy type checkers, even though the match covers every case
 
 
 def create_instance(

@@ -267,17 +267,14 @@ def bounds_to_repr(start: Bound[object], stop: Bound[object]) -> str:
     right, right_sinister = stop
 
     if left is None:
-        if right is None:
-            return "Unbounded()"
-        else:
-            cls_name = "RightClosed" if right_sinister else "RightOpen"
-            return f"{cls_name}({right!r})"
-    else:
-        if right is None:
-            cls_name = "LeftOpen" if left_sinister else "LeftClosed"
-            return f"{cls_name}({left!r})"
-        else:
-            return f"{SINISTERITY_TO_CLASS_NAME[left_sinister, right_sinister]}({left!r}, {right!r})"
+        cls_name = "RightClosed" if right_sinister else "RightOpen"
+        return f"{cls_name}({right!r})"
+
+    if right is None:
+        cls_name = "LeftOpen" if left_sinister else "LeftClosed"
+        return f"{cls_name}({left!r})"
+
+    return f"{SINISTERITY_TO_CLASS_NAME[left_sinister, right_sinister]}({left!r}, {right!r})"
 
 
 def bounds_to_str(start: Bound[object], stop: Bound[object]) -> str:
