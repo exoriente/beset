@@ -89,7 +89,7 @@ The results are equal.
 True
 ```
 
-The `beset` library support unbounded intervals without upper or lower bound.
+The `beset` library supports unbounded intervals without upper or lower bound.
 Create such intervals by using `None` as a bound.
 
 ```python
