@@ -836,6 +836,12 @@ class TestIntervalGetItem:
         assert Open(0, 1)[0] == Open(0, 1)
         assert Open(0, 1)[-1] == Open(0, 1)
 
+    def test_index_error(self) -> None:
+        with raises(IndexError):
+            (Open(0, 1) | Closed(2, 3))[-3]
+        with raises(IndexError):
+            (Open(0, 1) | Closed(2, 3))[2]
+
     def test_slice(self) -> None:
         a = Open(0, 1) | OpenClosed(2, 3) | ClosedOpen(4, 5) | Closed(6, 7) | Open(8, 9)
 
@@ -866,6 +872,44 @@ class TestIntervalGetItem:
     def test_slice_bad_step_size(self) -> None:
         with raises(ValueError):
             Open(0, 1)[::0]
+
+
+class TestIntervalIter:
+    def test_empty(self) -> None:
+        assert list(EMPTY) == []
+
+    def test_interval(self) -> None:
+        assert list(Open(0, 1)) == [Open(0, 1)]
+        assert list(Open(0, None)) == [Open(0, None)]
+        assert list(Open(None, 0)) == [Open(None, 0)]
+        assert list(UNBOUNDED) == [UNBOUNDED]
+
+    def test_interval_set(self) -> None:
+        assert list(Open(0, 1) | Closed(2, 3) | Open(4, 5)) == [Open(0, 1), Closed(2, 3), Open(4, 5)]
+        assert list(Open(None, 1) | Closed(2, 3) | Open(4, 5)) == [Open(None, 1), Closed(2, 3), Open(4, 5)]
+        assert list(Open(0, 1) | Closed(2, 3) | Open(4, None)) == [Open(0, 1), Closed(2, 3), Open(4, None)]
+        assert list(Open(None, 1) | Closed(2, 3) | Open(4, None)) == [Open(None, 1), Closed(2, 3), Open(4, None)]
+
+
+class TestIntervalReversed:
+    def test_empty(self) -> None:
+        assert list(reversed(EMPTY)) == []
+
+    def test_interval(self) -> None:
+        assert list(reversed(Open(0, 1))) == [Open(0, 1)]
+        assert list(reversed(Open(0, None))) == [Open(0, None)]
+        assert list(reversed(Open(None, 0))) == [Open(None, 0)]
+        assert list(reversed(UNBOUNDED)) == [UNBOUNDED]
+
+    def test_interval_set(self) -> None:
+        assert list(reversed(Open(0, 1) | Closed(2, 3) | Open(4, 5))) == [Open(4, 5), Closed(2, 3), Open(0, 1)]
+        assert list(reversed(Open(None, 1) | Closed(2, 3) | Open(4, 5))) == [Open(4, 5), Closed(2, 3), Open(None, 1)]
+        assert list(reversed(Open(0, 1) | Closed(2, 3) | Open(4, None))) == [Open(4, None), Closed(2, 3), Open(0, 1)]
+        assert list(reversed(Open(None, 1) | Closed(2, 3) | Open(4, None))) == [
+            Open(4, None),
+            Closed(2, 3),
+            Open(None, 1),
+        ]
 
 
 class TestIntervalRepr:

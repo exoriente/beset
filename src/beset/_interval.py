@@ -1,6 +1,6 @@
 from bisect import bisect_right
-from collections.abc import Iterable, Mapping
-from itertools import chain, pairwise
+from collections.abc import Iterable, Iterator, Mapping
+from itertools import chain, pairwise, starmap
 from operator import itemgetter
 from sys import version_info
 from typing import Any, Generic, Literal, TypeVar, cast, overload
@@ -175,11 +175,33 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
     def _data(self) -> IntervalData[T]:
         return self._odd, self._bounds
 
-    def _bound_pairs(self) -> Iterable[tuple[Bound[T], Bound[T]]]:
+    def _bound_pairs(self) -> Iterator[tuple[Bound[T], Bound[T]]]:
         bounds = chain(self._odd * ((None, True),), self._bounds, ((None, False),))
         for pair in batched(bounds, 2):
             if len(pair) == 2:
                 yield cast(tuple[Bound[T], Bound[T]], pair)
+
+    def _bound_pairs_reversed(self) -> Iterator[tuple[Bound[T], Bound[T]]]:
+        bounds = chain(
+            ((len(self._bounds) + self._odd) % 2 * ((None, False),)), reversed(self._bounds), ((None, True),)
+        )
+        for pair in batched(bounds, 2):
+            if len(pair) == 2:
+                yield cast(tuple[Bound[T], Bound[T]], (pair[1], pair[0]))  # type:ignore[ty:index-out-of-bounds,unused-ignore]
+
+    def _interval(self, index: int) -> "Interval[T]":
+        a = 2 * index - self._odd
+        b = a + 1
+        if a == -1:
+            if b == len(self._bounds):
+                return cast(Interval[T], UNBOUNDED)
+            else:
+                return cast(Interval[T], create_singular_instance((None, True), self._bounds[b]))
+        else:
+            if b == len(self._bounds):
+                return cast(Interval[T], create_singular_instance(self._bounds[a], (None, False)))
+            else:
+                return create_singular_instance(self._bounds[a], self._bounds[b])
 
     def __eq__(self, other: object, /) -> bool:
         return (self._odd, self._bounds) == (other._odd, other._bounds) if isinstance(other, IntervalSet) else False
@@ -271,7 +293,7 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
     def __getitem__(self, index_or_slice: int | slice, /) -> "Interval[T] | IntervalSet[T]":
         match index_or_slice:
             case int() as i:
-                return self.intervals[i]
+                return self._interval(i)
             case slice() as s:
                 length = len(self)
                 step = 1 if s.step is None else s.step
@@ -300,6 +322,12 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
                 new_odd = self._odd and start == 0
 
                 return create_instance((new_odd, new_bounds))
+
+    def __iter__(self) -> "Iterator[Interval[T]]":
+        yield from starmap(create_singular_instance, self._bound_pairs())  # pyrefly:ignore[invalid-yield]
+
+    def __reversed__(self) -> "Iterator[Interval[T]]":
+        yield from starmap(create_singular_instance, self._bound_pairs_reversed())  # pyrefly:ignore[invalid-yield]
 
     def __repr__(self) -> str:
         contents = ", ".join(bounds_to_repr(a, b) for a, b in self._bound_pairs())
