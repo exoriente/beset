@@ -836,6 +836,12 @@ class TestIntervalGetItem:
         assert Open(0, 1)[0] == Open(0, 1)
         assert Open(0, 1)[-1] == Open(0, 1)
 
+    def test_index_error(self) -> None:
+        with raises(IndexError):
+            (Open(0, 1) | Closed(2, 3))[-3]
+        with raises(IndexError):
+            (Open(0, 1) | Closed(2, 3))[2]
+
     def test_slice(self) -> None:
         a = Open(0, 1) | OpenClosed(2, 3) | ClosedOpen(4, 5) | Closed(6, 7) | Open(8, 9)
 
