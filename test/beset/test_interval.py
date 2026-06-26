@@ -383,24 +383,6 @@ class TestIntervalBool:
         assert IntervalSet([Open(0, 1), Open(2, 3)])
 
 
-class TestIntervalIntervals:
-    def test_empty(self) -> None:
-        assert EMPTY.intervals == ()
-
-    def test_interval(self, interval_class: type[IntervalType[int]]) -> None:
-        assert interval_class(1, 2).intervals == (interval_class(1, 2),)
-
-    def test_interval_set(self) -> None:
-        assert IntervalSet([Open(0, 1), Closed(2, 3), Open(4, 5)]).intervals == (Open(0, 1), Closed(2, 3), Open(4, 5))
-
-    def test_interval_set_unbounded(self) -> None:
-        assert IntervalSet([Open(None, 1), Closed(2, 3), Open(4, None)]).intervals == (
-            RightOpen(1),
-            Closed(2, 3),
-            LeftOpen(4),
-        )
-
-
 class TestIntervalContains:
     def test_empty(self) -> None:
         assert 1 not in EMPTY

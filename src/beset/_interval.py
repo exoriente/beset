@@ -158,7 +158,6 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
     __slots__ = ["_odd", "_bounds", "_intervals_cached"]
     _odd: bool
     _bounds: tuple[Bound[T], ...]
-    _intervals_cached: tuple["Interval[T]", ...] | None
 
     def __init__(self, intervals: Iterable["IntervalSet[T]"] = ()):
         # not in use, metaclass handles initialization
@@ -170,7 +169,7 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
         return union_data(map(IntervalSet._data, intervals))  # type:ignore[arg-type]
 
     def _post_construct(self) -> None:
-        self._intervals_cached = None
+        pass
 
     def _data(self) -> IntervalData[T]:
         return self._odd, self._bounds
@@ -215,13 +214,6 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
 
     def __bool__(self) -> bool:
         return self._odd or bool(self._bounds)
-
-    @property
-    def intervals(self) -> tuple["Interval[T]", ...]:
-        if self._intervals_cached is None:
-            self._intervals_cached = tuple(create_singular_instance(start, stop) for start, stop in self._bound_pairs())
-
-        return self._intervals_cached
 
     def __contains__(self, item: object) -> bool:
         value = (item, False)
@@ -479,8 +471,6 @@ class _ConcreteInterval(Interval[T], Generic[T]):
                 self._start = (0, start, start_sinister)
                 self._stop = (0, stop, stop_sinister)
 
-        self._intervals_cached = (self,)
-
 
 class Open(_ConcreteInterval[T], OpenSet[T], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
     @staticmethod
@@ -601,9 +591,6 @@ class Empty(OpenSet[Never], ClosedSet[Never], OpenClosedSet[Never], ClosedOpenSe
     @classmethod
     def _construct(cls) -> IntervalData[Never]:  # type:ignore[ty:invalid-method-override,unused-ignore,override]
         return False, ()
-
-    def _post_construct(self) -> None:
-        self._intervals_cached = ()
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}()"
