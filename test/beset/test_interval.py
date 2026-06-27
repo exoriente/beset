@@ -894,6 +894,27 @@ class TestIntervalReversed:
         ]
 
 
+class TestIntervalEnclosure:
+    def test_empty(self) -> None:
+        assert EMPTY.enclosure() == EMPTY
+
+    def test_half_bounded(self) -> None:
+        assert LeftOpen(0).enclosure() == LeftOpen(0)
+        assert RightOpen(0).enclosure() == RightOpen(0)
+        assert LeftClosed(0).enclosure() == LeftClosed(0)
+        assert RightClosed(0).enclosure() == RightClosed(0)
+
+    def test_unbounded(self) -> None:
+        assert UNBOUNDED.enclosure() == UNBOUNDED
+
+    def test_interval_set(self) -> None:
+        assert (Open(0, 1) | Closed(2, 3)).enclosure() == OpenClosed(0, 3)
+        assert (Open(0, 1) | Closed(2, 3) | Open(4, 5)).enclosure() == Open(0, 5)
+        assert (Open(None, 1) | Closed(2, 3) | Open(4, 5)).enclosure() == Open(None, 5)
+        assert (Open(0, 1) | Closed(2, 3) | Open(4, None)).enclosure() == Open(0, None)
+        assert (Open(None, 1) | Closed(2, 3) | Open(4, None)).enclosure() == UNBOUNDED
+
+
 class TestIntervalRepr:
     def test_empty(self) -> None:
         assert repr(EMPTY) == "Empty()"

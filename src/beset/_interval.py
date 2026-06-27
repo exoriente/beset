@@ -6,9 +6,9 @@ from sys import version_info
 from typing import Any, Generic, Literal, TypeVar, cast, overload
 
 if version_info >= (3, 11):  # pragma: no cover
-    from typing import Never  # type:ignore[attr-defined,unused-ignore]
+    from typing import Never, Self  # type:ignore[attr-defined,unused-ignore]
 else:
-    from typing_extensions import Never
+    from typing_extensions import Never, Self
 
 if version_info >= (3, 12):  # pragma: no cover
     from itertools import batched  # type:ignore[attr-defined,unused-ignore]
@@ -321,6 +321,11 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
     def __reversed__(self) -> "Iterator[Interval[T]]":
         yield from starmap(create_singular_instance, self._bound_pairs_reversed())  # pyrefly:ignore[invalid-yield]
 
+    def enclosure(self) -> "Interval[T]":
+        start = (None, True) if self._odd else self._bounds[0]
+        stop = (None, False) if (len(self._bounds) + self._odd) % 2 else self._bounds[-1]
+        return create_singular_instance(cast(Bound[T], start), cast(Bound[T], stop))
+
     def __repr__(self) -> str:
         contents = ", ".join(bounds_to_repr(a, b) for a, b in self._bound_pairs())
         return f"{type(self).__name__}([{contents}])"
@@ -413,6 +418,9 @@ class Interval(IntervalSet[T], Generic[T]):
             return not value < self._start and value < self._stop  # type:ignore[ty:unsupported-operator,unused-ignore]
         except TypeError:
             return False
+
+    def enclosure(self) -> Self:  # pyright:ignore[reportIncompatibleMethodOverride]
+        return self
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}({self.start!r}, {self.stop!r})"
@@ -591,6 +599,9 @@ class Empty(OpenSet[Never], ClosedSet[Never], OpenClosedSet[Never], ClosedOpenSe
     @classmethod
     def _construct(cls) -> IntervalData[Never]:  # type:ignore[ty:invalid-method-override,unused-ignore,override]
         return False, ()
+
+    def enclosure(self) -> "Empty":  # type:ignore[ty:invalid-method-override,override,unused-ignore]
+        return self
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}()"
