@@ -2,31 +2,45 @@
 name = "beset"
 version = "0.1.0"
 description = "Immutable, typed intervals as sets"
+readme = "readme.md"
 authors = [
-    {name = "Maarten Oosten",email = "oosten@gmail.com"}
+    { name = "Maarten Oosten", email = "oosten@gmail.com" }
 ]
 license = "MIT"
-readme = "readme.md"
 requires-python = ">=3.10"
 dependencies = []
 
+[dependency-groups]
+lint = [
+    "ruff>=0.16.5",
+]
+type-check = [
+    "mypy>=2.3.1",
+    "pyrefly>=1.2.0",
+    "pyright>=1.1.411",
+    "ty>=0.0.75",
+]
+test = [
+    "pytest>=9.1.1",
+]
+coverage = [
+    "pytest-cov>=7.1.0",
+    {include-group = "test"},
+]
+slotscheck = [
+    "slotscheck>=0.20.1",
+]
+dev = [
+    {include-group = "lint"},
+    {include-group = "type-check"},
+    {include-group = "test"},
+    {include-group = "coverage"},
+    {include-group = "slotscheck"},
+]
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
-
-[dependency-groups]
-dev = [
-    "mypy (>=2.1.0,<3.0.0)",
-    "ruff (>=0.15.15,<0.16.0)",
-    "pytest (>=9.0.3,<10.0.0)",
-    "pytest-cov (>=7.1.0,<8.0.0)",
-    "ty (>=0.0.42,<0.0.43)",
-    "pyrefly (>=1.0.0,<2.0.0)",
-    "tox (>=4.55.1,<5.0.0)",
-    "slotscheck (>=0.20.0,<0.21.0)",
-    "pyright (>=1.1.411,<2.0.0)"
-]
+requires = ["uv_build>=0.12.7,<0.13.0"]
+build-backend = "uv_build"
 
 [tool.ruff]
 line-length = 120

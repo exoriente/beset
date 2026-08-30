@@ -62,7 +62,7 @@ def choose_class(
             return interval_type  # type:ignore[return-value]
 
         if len(bounds) + odd > 2 and interval_type in [OpenSet, ClosedSet, OpenClosedSet, ClosedOpenSet]:
-            return interval_type
+            return interval_type  # type:ignore[return-value]
 
         if len(bounds) == 1 and interval_type in [LeftOpen, LeftClosed, RightOpen, RightClosed]:
             return interval_type  # type:ignore[return-value]
@@ -149,7 +149,7 @@ def create_singular_instance(start: Bound[T], stop: Bound[T]) -> "Interval[T]":
 
 
 class IntervalMeta(type):
-    def __call__(cls: type["IntervalSet[T]"], *args, **kwargs):  # type:ignore[no-untyped-def,misc]
+    def __call__(cls: type["IntervalSet[T]"], *args, **kwargs):  # type:ignore[no-untyped-def,misc,ty:invalid-method-override,unused-ignore]
         interval_data = cls._construct(*args, **kwargs)
         return create_instance(interval_data, cls)
 
@@ -186,7 +186,7 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
         )
         for pair in batched(bounds, 2):
             if len(pair) == 2:
-                yield cast(tuple[Bound[T], Bound[T]], (pair[1], pair[0]))  # type:ignore[ty:index-out-of-bounds,unused-ignore]
+                yield cast(tuple[Bound[T], Bound[T]], (pair[1], pair[0]))
 
     def _interval(self, index: int) -> "Interval[T]":
         a = 2 * index - self._odd

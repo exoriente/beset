@@ -2,7 +2,7 @@ source_path = src/
 tests_path = test/
 python_paths = $(source_path) $(tests_path)
 
-all: nice tests tox
+all: nice tests nox
 
 ruff-format:
 	ruff format
@@ -29,15 +29,15 @@ type-checks: mypy ty pyright pyrefly
 slotscheck:
 	slotscheck $(source_path)
 
-    checks: ruff-check type-checks slotscheck
+checks: ruff-check type-checks slotscheck
 
 nice: format checks
 
 tests:
 	pytest
 
-tox:
-	tox
+nox:
+	nox
 
 missing-coverage:
 	pytest --cov --cov-report term-missing

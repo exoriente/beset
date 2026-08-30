@@ -16,44 +16,34 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.1
         with:
-          python-version: ${{ matrix.python-version }}
+          enable-cache: true
 
-      - name: Cache pip packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-${{ matrix.python-version }}-
-
-      - name: Install poetry
-        run: python -m pip install poetry
-
-      - name: Install package and dependencies
-        run: poetry install
+      - name: Install Python, dependencies and project
+        run: uv sync --locked --python ${{ matrix.python-version }}
 
       - name: Run ruff check
-        run: poetry run ruff check src/ test/
+        run: uv run ruff check src/ test/
 
       - name: Run mypy
-        run: poetry run mypy src/ test/
+        run: uv run mypy src/ test/
 
       - name: Run ty
-        run: poetry run ty check src/ test/
+        run: uv run ty check src/ test/
 
       - name: Run pyright
-        run: poetry run pyright src/ test/
+        run: uv run pyright src/ test/
 
       - name: Run pyrefly
-        run: poetry run pyrefly check src/ test/
+        run: uv run pyrefly check src/ test/
 
       - name: Run slotscheck
-        run: poetry run slotscheck src/
+        run: uv run slotscheck src/
 
       - name: Run tests
-        run: poetry run pytest
+        run: uv run pytest
