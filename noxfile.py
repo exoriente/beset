@@ -28,5 +28,10 @@ def lint(s: Session) -> None:
     s.run("ruff", "format", "--check", *python_dirs)
 
 
+@uv_session(python=python_versions, uv_groups=["slotscheck"])
+def slots_check(s: Session) -> None:
+    s.run("slotscheck", *python_source_dirs)
+
+
 if __name__ == "__main__":
     main()

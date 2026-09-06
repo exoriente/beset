@@ -3,7 +3,8 @@ revision = 3
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.15'",
-    "python_full_version < '3.15'",
+    "python_full_version >= '3.11' and python_full_version < '3.15'",
+    "python_full_version < '3.11'",
 ]
 
 [[package]]
@@ -74,6 +75,9 @@ wheels = [
 name = "beset"
 version = "0.1.0"
 source = { editable = "." }
+dependencies = [
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+]
 
 [package.dev-dependencies]
 coverage = [
@@ -107,6 +111,7 @@ type-check = [
 ]
 
 [package.metadata]
+requires-dist = [{ name = "typing-extensions", marker = "python_full_version < '3.11'", specifier = ">=4.16.0" }]
 
 [package.metadata.requires-dev]
 coverage = [
@@ -120,11 +125,11 @@ dev = [
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "pytest-cov", specifier = ">=7.1.0" },
     { name = "ruff", specifier = ">=0.16.5" },
-    { name = "slotscheck", specifier = ">=0.20.1" },
+    { name = "slotscheck", specifier = "==0.21.0b1" },
     { name = "ty", specifier = ">=0.0.75" },
 ]
 lint = [{ name = "ruff", specifier = ">=0.16.5" }]
-slotscheck = [{ name = "slotscheck", specifier = ">=0.20.1" }]
+slotscheck = [{ name = "slotscheck", specifier = "==0.21.0b1" }]
 test = [{ name = "pytest", specifier = ">=9.1.1" }]
 type-check = [
     { name = "mypy", specifier = ">=2.3.1" },
@@ -638,14 +643,14 @@ wheels = [
 
 [[package]]
 name = "slotscheck"
-version = "0.20.1"
+version = "0.21.0b1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "tomli", marker = "python_full_version < '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ae/dc/46346431b07aefd028e48569b8b4a067a7604f98559a14e848d90febaea0/slotscheck-0.20.1.tar.gz", hash = "sha256:f590fddcea4b673f6ef3ee0010a545df1cad96941ef09906b28b2ee31c38c66b", size = 14747, upload-time = "2026-07-05T13:23:28.803Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a9/7c/a02b29f0c6c73fbef950347e244fb16efe4700aa6386cbd10e4ef44643ba/slotscheck-0.21.0b1.tar.gz", hash = "sha256:64f38078ff02b6e9e5ecfda9f03d41f879dab0c65e9e286ed739754fa569fd9a", size = 15361, upload-time = "2026-09-03T18:49:48.296Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/59/e9/232563e90b04c3ddd93af1a6ecf8ff8566ad7bb80e46843c472c36f2578c/slotscheck-0.20.1-py3-none-any.whl", hash = "sha256:e8ec875fc40e37660babb28805294615d5631bb09c51ee75db08d03d4b6c156e", size = 17634, upload-time = "2026-07-05T13:23:27.53Z" },
+    { url = "https://files.pythonhosted.org/packages/1c/65/2aef243ccfbdee442b90db6e6d62a464f99d617396d6d758c7f7e221cb39/slotscheck-0.21.0b1-py3-none-any.whl", hash = "sha256:5e23fa46942e42cba4fc1c2d05c91a396f58686fbe6b8e6a881ed24cc31e6b8f", size = 18099, upload-time = "2026-09-03T18:49:47.09Z" },
 ]
 
 [[package]]
