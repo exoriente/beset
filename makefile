@@ -2,42 +2,42 @@ source_path = src/
 tests_path = test/
 python_paths = $(source_path) $(tests_path)
 
-all: nice tests tox
+all: nice tests nox
 
 ruff-format:
-	ruff format
+	uv run ruff format
 
 format: ruff-format
 
 ruff-check:
-	ruff check --fix
+	uv run ruff check --fix
 
 mypy:
-	mypy $(python_paths)
+	uv run mypy $(python_paths)
 
 ty:
-	ty check $(python_paths)
+	uv run ty check $(python_paths)
 
 pyright:
-	pyright $(python_paths)
+	uv run pyright $(python_paths)
 
 pyrefly:
-	pyrefly check $(python_paths)
+	uv run pyrefly check $(python_paths)
 
 type-checks: mypy ty pyright pyrefly
 
 slotscheck:
-	slotscheck $(source_path)
+	uv run slotscheck $(source_path)
 
-    checks: ruff-check type-checks slotscheck
+checks: ruff-check type-checks slotscheck
 
 nice: format checks
 
 tests:
-	pytest
+	uv run pytest
 
-tox:
-	tox
+nox:
+	uvx --with nox-uv nox
 
 missing-coverage:
-	pytest --cov --cov-report term-missing
+	uv run pytest --cov --cov-report term-missing

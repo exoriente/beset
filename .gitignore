@@ -1,5 +1,17 @@
+# Python
+
 # packaging
 dist/
 
+# tools
+
+# ruff
+.ruff_cache/
+# mypy
+.mypy_cache
+# pytest
+.pytest_cache/
 # pytest coverage
 .coverage
+# nox
+.nox/
