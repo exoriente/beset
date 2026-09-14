@@ -7,6 +7,26 @@ authors = [
     { name = "Maarten Oosten", email = "oosten@gmail.com" }
 ]
 license = "MIT"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python",
+    "Typing :: Typed",
+]
+keywords = [
+    "interval", "typesafe", "set", "range", "period", "bound", "open",
+    "closed", "half-open", "bounded", "unbounded", "subset", "span",
+    "continuous", "intersection", "union", "generic",
+]
 requires-python = ">=3.10"
 dependencies = [
     "typing-extensions>=4.16.0 ; python_full_version < '3.11'",
@@ -39,6 +59,12 @@ dev = [
     {include-group = "coverage"},
     {include-group = "slotscheck"},
 ]
+
+[project.urls]
+Homepage = "https://github.com/exoriente/beset"
+Repository = "https://github.com/exoriente/beset"
+Issues = "https://github.com/exoriente/beset/issues"
+
 
 [build-system]
 requires = ["uv_build>=0.12.7,<0.13.0"]
