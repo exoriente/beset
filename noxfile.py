@@ -9,9 +9,10 @@ python_test_dirs = ["test"]
 python_dirs = python_source_dirs + python_test_dirs
 
 
-@uv_session(python=python_versions, uv_groups=["test"])
-def test(s: Session) -> None:
-    s.run("python", "-m", "pytest")
+@uv_session(python=python_versions, uv_only_groups=["lint"])
+def lint(s: Session) -> None:
+    s.run("ruff", "check", *python_dirs)
+    s.run("ruff", "format", "--check", *python_dirs)
 
 
 @uv_session(python=python_versions, uv_groups=["test", "type-check"])
@@ -22,15 +23,14 @@ def type_check(s: Session) -> None:
     s.run("pyrefly", "check", *python_dirs)
 
 
-@uv_session(python=python_versions, uv_only_groups=["lint"])
-def lint(s: Session) -> None:
-    s.run("ruff", "check", *python_dirs)
-    s.run("ruff", "format", "--check", *python_dirs)
-
-
 @uv_session(python=python_versions, uv_groups=["slotscheck"])
 def slots_check(s: Session) -> None:
     s.run("slotscheck", *python_source_dirs)
+
+
+@uv_session(python=python_versions, uv_groups=["test"])
+def test(s: Session) -> None:
+    s.run("pytest")
 
 
 if __name__ == "__main__":

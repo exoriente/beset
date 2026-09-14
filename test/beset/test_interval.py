@@ -53,10 +53,10 @@ class TestIntervalCreation:
         assert type(Empty()) is Empty
 
     def test_interval_restricted(self) -> None:
-        assert type(Open(0, 1)) is Open
         assert type(Open(0, None)) is LeftOpen
         assert type(Open(None, 0)) is RightOpen
         assert type(Open(None, None)) is Unbounded
+        assert type(Open(0, 1)) is Open  # moved to end of function to avoid ty bug: https://github.com/astral-sh/ty/issues/4523
 
     def test_interval_restricted_but_empty(self, interval_class: type[IntervalType[int]]) -> None:
         with raises(ValueError):

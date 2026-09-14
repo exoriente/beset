@@ -165,7 +165,7 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
         raise NotImplementedError  # pragma: no cover
 
     @classmethod
-    def _construct(cls, intervals: Iterable["IntervalSet[T]"] = ()) -> IntervalData[T]:
+    def _construct(cls, intervals: Iterable["IntervalSet[T]"] = ()) -> IntervalData[T]:  # type:ignore[ty:invalid-generic-class,unused-ignore]
         return union_data(map(IntervalSet._data, intervals))  # type:ignore[arg-type]
 
     def _post_construct(self) -> None:
