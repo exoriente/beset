@@ -2,6 +2,13 @@
 
 _immutable, typed intervals with the interface of Python sets_
 
+
+[![PyPI](https://img.shields.io/pypi/v/beset?color=blue)](https://pypi.org/project/beset/)
+[![Python versions](https://img.shields.io/pypi/pyversions/beset)](https://pypi.org/project/beset/)
+[![License](https://img.shields.io/pypi/l/beset)](https://github.com/exoriente/beset/blob/main/license)
+[![Build](https://img.shields.io/github/actions/workflow/status/exoriente/beset/ci.yaml?branch=main)](https://github.com/exoriente/beset/actions)
+
+
 - Intervals are typed as generics and pass type checks by all common Python type checkers:
   - `mypy --strict`
   - `ty`

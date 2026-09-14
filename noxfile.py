@@ -3,7 +3,7 @@ from nox_uv import session as uv_session
 
 options.default_venv_backend = "uv"
 
-python_versions = ["3.10", "3.11", "3.12", "3.13", "3.14"]
+python_versions = ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
 python_source_dirs = ["src"]
 python_test_dirs = ["test"]
 python_dirs = python_source_dirs + python_test_dirs
