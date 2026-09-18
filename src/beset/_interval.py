@@ -32,6 +32,7 @@ from beset._protocol import Sortable
 T = TypeVar("T", covariant=True, bound=Sortable | None)
 U = TypeVar("U", covariant=True, bound=Sortable | None)
 V = TypeVar("V", bound=Sortable | None)
+W = TypeVar("W", covariant=True, bound=Sortable)
 
 
 def analyze_sinisterity(sinisterities: Iterable[Sinisterity]) -> Literal["co", "oc", "alt", "misc"]:
@@ -253,19 +254,19 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
         return create_instance(union_data(map(IntervalSet._data, (self, other))))  # type:ignore[arg-type,type-var]
 
     @overload
-    def intersection(self: "IntervalSet[V | None]", *others: "IntervalSet[U]") -> "IntervalSet[V | U]": ...
+    def intersection(self: "IntervalSet[V | None]", *others: "IntervalSet[W]") -> "IntervalSet[V | W]": ...
 
     @overload
-    def intersection(self: "IntervalSet[V]", *others: "IntervalSet[U | None]") -> "IntervalSet[V | U]": ...  # type:ignore[overload-cannot-match]
+    def intersection(self: "IntervalSet[V]", *others: "IntervalSet[U | None]") -> "IntervalSet[V | U]": ...
 
     def intersection(self: "IntervalSet[V | None]", *others: "IntervalSet[U]") -> "IntervalSet[V | U]":
         return create_instance(intersection_data(map(IntervalSet._data, chain((self,), others))))  # type:ignore[arg-type,type-var]
 
     @overload
-    def __and__(self: "IntervalSet[V | None]", other: "IntervalSet[U]", /) -> "IntervalSet[V | U]": ...
+    def __and__(self: "IntervalSet[V | None]", other: "IntervalSet[W]", /) -> "IntervalSet[V | W]": ...
 
     @overload
-    def __and__(self: "IntervalSet[V]", other: "IntervalSet[U | None]", /) -> "IntervalSet[V | U]": ...  # type:ignore[overload-cannot-match]
+    def __and__(self: "IntervalSet[V]", other: "IntervalSet[U | None]", /) -> "IntervalSet[V | U]": ...
 
     def __and__(self: "IntervalSet[V | None]", other: "IntervalSet[U]", /) -> "IntervalSet[V | U]":
         return create_instance(intersection_data(map(IntervalSet._data, (self, other))))  # type:ignore[arg-type,type-var]
