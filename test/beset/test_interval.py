@@ -685,7 +685,7 @@ class TestIntervalIntersection:
     def test_multiple_arguments(self) -> None:
         assert Closed(0, 10).intersection(Open(None, 6), Open(4, 7), Closed(2, 100)) == Open(4, 6)
 
-    def test_type_narrowing(self) -> None:
+    def test_type_narrowing_of_none_on_left(self) -> None:
         """
         type checkers should be satisfied that an intersection between and interval of [int | None] and of [int]
         should always return an interval of [int]
@@ -693,18 +693,56 @@ class TestIntervalIntersection:
         a: IntervalSet[int] = Open(None, 10) & Open(0, 100)
         assert a == Open(0, 10)
 
-        # ty does not understand the reversed situation, but the other checkers do:
+        b: IntervalSet[int] = Open(10, None) & Open(0, 100)
+        assert b == Open(10, 100)
 
-        b: IntervalSet[int] = Open(0, 100) & Open(None, 10)  # type:ignore[ty:invalid-assignment,unused-ignore]
-        assert b == Open(0, 10)
+        c: IntervalSet[int] = Open(None, None) & Open(0, 100)
+        assert c == Open(0, 100)
 
-        c: IntervalSet[int] = Open(None, 10).intersection(Closed(0, 100), Open(-50, 50))
-        assert c == ClosedOpen(0, 10)
+    def test_type_narrowing_of_none_on_left_multiple(self) -> None:
+        """
+        type checkers should be satisfied that an intersection between and interval of [int | None] and of [int]
+        should always return an interval of [int]
+        """
+        a: IntervalSet[int] = Open(None, 10).intersection(Closed(0, 100), Open(-50, 50))
+        assert a == ClosedOpen(0, 10)
 
-        # ty does not understand the reversed situation, but the other checkers do:
+        b: IntervalSet[int] = Open(10, None).intersection(Closed(0, 100), Open(-50, 50))
+        assert b == Open(10, 50)
 
-        d: IntervalSet[int] = Closed(0, 100).intersection(Open(None, 10), Open(-50, 50))  # type:ignore[ty:invalid-assignment,unused-ignore]
-        assert d == ClosedOpen(0, 10)
+        c: IntervalSet[int] = Open(None, None).intersection(Closed(0, 100), Open(-50, 50))
+        assert c == ClosedOpen(0, 50)
+
+    def test_type_narrowing_of_none_on_right(self) -> None:
+        """
+        type checkers should be satisfied that an intersection between and interval of [int | None] and of [int]
+        should always return an interval of [int]
+        """
+        a: IntervalSet[int] = Open(0, 100) & Open(None, 10)
+        assert a == Open(0, 10)
+
+        b: IntervalSet[int] = Open(0, 100) & Open(10, None)
+        assert b == Open(10, 100)
+
+        c: IntervalSet[int] = Open(0, 100) & Open(None, None)
+        assert c == Open(0, 100)
+
+    def test_type_narrowing_of_none_on_right_multiple(self) -> None:
+        """
+        type checkers should be satisfied that an intersection between and interval of [int | None] and of [int]
+        should always return an interval of [int]
+        """
+        a: IntervalSet[int] = Closed(0, 100).intersection(Open(None, 10), Open(-50, 50))
+        assert a == ClosedOpen(0, 10)
+
+        b: IntervalSet[int] = Closed(0, 100).intersection(Open(5, None), Open(-50, 50))
+        assert b == Open(5, 50)
+
+        c: IntervalSet[int] = Closed(0, 100).intersection(Open(5, 10), Open(None, 50))
+        assert c == Open(5, 10)
+
+        d: IntervalSet[int] = Closed(0, 100).intersection(Open(5, 10), Open(-50, None))
+        assert d == Open(5, 10)
 
 
 class TestIntervalDifference:
