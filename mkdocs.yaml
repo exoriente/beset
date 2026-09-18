@@ -1,9 +1,7 @@
-site_name: "beset"
 docs_dir: doc
 site_dir: doc-site
 theme:
   name: readthedocs
-
 plugins:
   - search
   - include-markdown
@@ -15,3 +13,10 @@ plugins:
             show_root_full_path: false
             show_source: false
             members_order: source
+
+site_name: "beset"
+nav:
+  - beset: index.md
+  - Class hierarchy: class-hierarchy.md
+  - API reference: api-reference.md
+  - FAQ: faq.md

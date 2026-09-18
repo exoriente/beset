@@ -161,8 +161,10 @@ class IntervalMeta(type):
 class IntervalSet(Generic[T], metaclass=IntervalMeta):
     """
     The `IntervalSet` type represents intervals and interval unions of any kind, including the empty interval.
-    Unbounded intervals can also be represented when an `IntervalSet` has `None` or a union with `None` as its type argument.
+    Unbounded intervals can also be represented when an `IntervalSet` has `None`
+    or a union with `None` as its type argument.
     """
+
     __slots__ = ["_odd", "_bounds", "_intervals_cached"]
     _odd: bool
     _bounds: tuple[Bound[T], ...]
@@ -182,16 +184,17 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
             subclass when the combined intervals have a simpler
             representation.
 
-        Examples:
+            Examples:
+
             Disjoint open intervals produce an `OpenSet`:
 
-            >>> IntervalSet([Open(1, 2), Open(3, 4)])
-            OpenSet([Open(1, 2), Open(3, 4)])
+                >>> IntervalSet([Open(1, 2), Open(3, 4)])
+                OpenSet([Open(1, 2), Open(3, 4)])
 
             Overlapping closed intervals produce a `Closed` interval:
 
-            >>> IntervalSet([Closed(1, 3), Closed(2, 4)])
-            Closed(1, 4)
+                >>> IntervalSet([Closed(1, 3), Closed(2, 4)])
+                Closed(1, 4)
         """
         raise NotImplementedError  # pragma: no cover
 
@@ -543,6 +546,7 @@ class IntervalSet(Generic[T], metaclass=IntervalMeta):
 
 class OpenSet(IntervalSet[T], Generic[T]):
     """A union of zero or more open intervals."""
+
     _left_sinister = True
     _right_sinister = False
 
@@ -563,6 +567,7 @@ class OpenSet(IntervalSet[T], Generic[T]):
 
 class ClosedSet(IntervalSet[T], Generic[T]):
     """A union of zero or more closed intervals."""
+
     _left_sinister = False
     _right_sinister = True
 
@@ -583,6 +588,7 @@ class ClosedSet(IntervalSet[T], Generic[T]):
 
 class ClosedOpenSet(IntervalSet[T], Generic[T]):
     """A union of zero or more half-open, half-closed intervals: `[start ; stop)`."""
+
     _left_sinister = False
     _right_sinister = False
 
@@ -603,6 +609,7 @@ class ClosedOpenSet(IntervalSet[T], Generic[T]):
 
 class OpenClosedSet(IntervalSet[T], Generic[T]):
     """A union of zero or more half-open, half-closed intervals: `(start ; stop]`."""
+
     _left_sinister = True
     _right_sinister = True
 
@@ -623,6 +630,7 @@ class OpenClosedSet(IntervalSet[T], Generic[T]):
 
 class Interval(IntervalSet[T], Generic[T]):
     """A single interval with configurable open or closed endpoints."""
+
     _left_sinister: bool
     _right_sinister: bool
     __slots__ = ["_start", "_stop"]
@@ -671,7 +679,6 @@ class Interval(IntervalSet[T], Generic[T]):
     def stop(self) -> T:
         """Return the upper endpoint, or `None` when the interval is unbounded above."""
         return self._stop[1]
-
 
     def __contains__(self, item: object) -> bool:
         """Return whether `item` belongs to this interval.
@@ -768,6 +775,7 @@ class _ConcreteInterval(Interval[T], Generic[T]):
             stop: The upper endpoint.
         """
         raise NotImplementedError  # pragma: no cover
+
 
 class Open(_ConcreteInterval[T], OpenSet[T], Generic[T]):  # pyright:ignore[reportIncompatibleMethodOverride]
     """A single interval that excludes both endpoints: `(start ; stop)`."""
