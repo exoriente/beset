@@ -1,17 +1,19 @@
 # Python
 
 # packaging
-dist/
+/dist/
 
 # tools
 
 # ruff
-.ruff_cache/
+/.ruff_cache/
 # mypy
-.mypy_cache
+/.mypy_cache
 # pytest
-.pytest_cache/
+/.pytest_cache/
 # pytest coverage
-.coverage
+/.coverage
 # nox
-.nox/
+/.nox/
+# mkdocs
+/doc-site/

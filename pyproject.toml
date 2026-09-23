@@ -62,6 +62,12 @@ dev = [
     {include-group = "coverage"},
     {include-group = "slotscheck"},
 ]
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-include-markdown-plugin>=7.3.0",
+    "mkdocstrings-python>=2.0.8",
+]
+
 
 [project.urls]
 Homepage = "https://github.com/exoriente/beset"
