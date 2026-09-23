@@ -7,6 +7,7 @@ _typed intervals with the interface of Python sets_
 [![Python versions](https://img.shields.io/pypi/pyversions/beset)](https://pypi.org/project/beset/)
 [![License](https://img.shields.io/pypi/l/beset)](https://github.com/exoriente/beset/blob/main/license)
 [![Build](https://img.shields.io/github/actions/workflow/status/exoriente/beset/ci.yaml?branch=main)](https://github.com/exoriente/beset/actions)
+[![Documentation](https://img.shields.io/readthedocs/beset)](https://beset.readthedocs.io)
 
 
 The `beset` Python library provides generic interval classes for use in typed Python.
@@ -14,6 +15,8 @@ It is tested to work well with `mypy`, `ty`, `pyright` and `pyrefly`.
 
 The interface of `beset` intervals mirrors that of Python `set`.
 If you know Python `set` operations, you know how to use this library.
+
+Full documentation is available on [Read the Docs](https://beset.readthedocs.io).
 
 
 ## Contents
