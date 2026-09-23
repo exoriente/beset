@@ -232,7 +232,7 @@ Using a stricter `IntervalSet`, without `None`, will allow only bounded interval
 c: b.Interval[int | None]
 ```
 
-The `Interval` class matches any type of atomic interval (Closed, Open, ClosedOpen, OpenClosed) and will allow unbounded ones as well, but not empty ones.
+The `Interval` class matches any type of atomic interval (`Closed`, `Open`, `ClosedOpen`, `OpenClosed`) and will allow unbounded ones as well, but not empty ones.
 
 ```python
 d: b.Interval[int]
@@ -262,8 +262,8 @@ Such classes exist also for closed, open and open-closed intervals.
 
 ### Intersections to get rid of `None`
 
-When performing operations on intervals their type or their type argument may change.
-For example, taking the complement of any `Interval[int]` will give you an `IntervalSet[int | None]`.
+Operations on intervals may return different types of intervals or intervals with different type arguments.
+For example, taking the complement of an `Interval[int]` will give you an `IntervalSet[int | None]`.
 
 ```python
 >>> x = ~b.Closed(0, 10)
